@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Login | GymNote{% endblock %}
+
+{% block content %}
+<h1>Login</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit">Entrar</button>
+</form>
+<p>Não possui conta? <a href="{% url 'accounts:register' %}">Cadastre-se</a>.</p>
+{% endblock %}

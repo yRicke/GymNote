@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Editar série | GymNote{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'core:workout_exercise' date_str=exercise_set.workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=exercise_set.workout_exercise.pk %}">&larr; Voltar ao exercício</a>
+</p>
+<h1>Editar série {{ exercise_set.order }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+</form>
+{% endblock %}

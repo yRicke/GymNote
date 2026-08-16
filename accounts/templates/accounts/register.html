@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro | GymNote{% endblock %}
+
+{% block content %}
+<h1>Cadastro</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Criar conta</button>
+</form>
+<p>Já possui conta? <a href="{% url 'accounts:login' %}">Faça login</a>.</p>
+{% endblock %}
