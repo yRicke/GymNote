@@ -152,7 +152,6 @@ class WorkoutFlowTests(TestCase):
             ),
             {
                 "weight_kg": "60",
-                "weight_description": "barra + 60kg",
                 "reps": "4",
                 "partial_reps": "",
                 "is_working_set": "on",
@@ -184,7 +183,6 @@ class WorkoutFlowTests(TestCase):
         exercise_set = ExerciseSet.objects.create(
             workout_exercise=workout_exercise,
             order=1,
-            weight_description="barra",
         )
         self.client.force_login(self.user_a)
 
