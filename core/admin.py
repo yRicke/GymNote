@@ -52,7 +52,6 @@ class ExerciseSetAdmin(admin.ModelAdmin):
         "workout_exercise",
         "order",
         "weight_kg",
-        "weight_description",
         "reps",
         "partial_reps",
         "is_working_set",

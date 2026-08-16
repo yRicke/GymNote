@@ -130,7 +130,6 @@ class ExerciseSet(models.Model):
         blank=True,
         validators=[MinValueValidator(0)],
     )
-    weight_description = models.CharField(max_length=150, blank=True)
     reps = models.PositiveIntegerField(null=True, blank=True)
     partial_reps = models.PositiveIntegerField(null=True, blank=True)
     is_working_set = models.BooleanField(default=False)

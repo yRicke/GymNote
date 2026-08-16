@@ -19,7 +19,6 @@
             <tr>
                 <th>Série</th>
                 <th>Peso</th>
-                <th>Descrição</th>
                 <th>Repetições</th>
                 <th>Parciais</th>
                 <th>Série válida</th>
@@ -31,7 +30,6 @@
                 <tr>
                     <td>{{ exercise_set.order }}</td>
                     <td>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg }} kg{% else %}-{% endif %}</td>
-                    <td>{{ exercise_set.weight_description|default:"-" }}</td>
                     <td>{{ exercise_set.reps|default_if_none:"-" }}</td>
                     <td>{{ exercise_set.partial_reps|default_if_none:"-" }}</td>
                     <td>{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</td>
