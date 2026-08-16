@@ -63,6 +63,18 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Workout.objects.exists())
 
+    def test_workout_page_has_no_lifecycle_controls(self):
+        Workout.objects.create(user=self.user_a, date=self.workout_date)
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+
+        self.assertNotContains(response, "Status:")
+        self.assertNotContains(response, "Iniciar treino")
+        self.assertNotContains(response, "Finalizar treino")
+
     def test_user_cannot_access_another_users_workout_group(self):
         _, workout_group, _ = self.create_exercise_entry(user=self.user_b)
         self.client.force_login(self.user_a)

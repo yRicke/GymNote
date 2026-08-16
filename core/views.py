@@ -140,32 +140,6 @@ def workout_day(request, date_str):
 
 @require_POST
 @login_required
-def start_workout(request, date_str):
-    workout_date = _parse_date(date_str)
-    workout, _ = Workout.objects.get_or_create(user=request.user, date=workout_date)
-    if workout.status != Workout.Status.COMPLETED:
-        workout.status = Workout.Status.IN_PROGRESS
-        if workout.started_at is None:
-            workout.started_at = timezone.now()
-        workout.save(update_fields=["status", "started_at", "updated_at"])
-        messages.success(request, "Treino iniciado.")
-    return redirect("core:workout_day", date_str=date_str)
-
-
-@require_POST
-@login_required
-def finish_workout(request, date_str):
-    workout_date = _parse_date(date_str)
-    workout = get_object_or_404(Workout, user=request.user, date=workout_date)
-    workout.status = Workout.Status.COMPLETED
-    workout.finished_at = timezone.now()
-    workout.save(update_fields=["status", "finished_at", "updated_at"])
-    messages.success(request, "Treino finalizado.")
-    return redirect("core:workout_day", date_str=date_str)
-
-
-@require_POST
-@login_required
 def add_muscle_groups(request, date_str):
     workout_date = _parse_date(date_str)
     workout = Workout.objects.filter(user=request.user, date=workout_date).first()

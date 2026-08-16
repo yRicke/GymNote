@@ -29,24 +29,12 @@ class Exercise(models.Model):
 
 
 class Workout(models.Model):
-    class Status(models.TextChoices):
-        PLANNED = "PLANNED", "Planejado"
-        IN_PROGRESS = "IN_PROGRESS", "Em andamento"
-        COMPLETED = "COMPLETED", "Concluído"
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="workouts",
     )
     date = models.DateField()
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PLANNED,
-    )
-    started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

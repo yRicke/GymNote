@@ -28,8 +28,8 @@ class ExerciseAdmin(admin.ModelAdmin):
 
 @admin.register(Workout)
 class WorkoutAdmin(admin.ModelAdmin):
-    list_display = ("user", "date", "status", "started_at", "finished_at")
-    list_filter = ("status", "date")
+    list_display = ("user", "date", "created_at", "updated_at")
+    list_filter = ("date",)
     search_fields = ("user__username", "user__email")
     date_hierarchy = "date"
 
