@@ -7,24 +7,8 @@
 
 <h1>Treino - {{ workout_date|date:"d/m/Y" }}</h1>
 
-{% if workout %}
-    <p>Status: <strong>{{ workout.get_status_display }}</strong></p>
-    {% if workout.started_at %}<p>Iniciado em: {{ workout.started_at }}</p>{% endif %}
-    {% if workout.finished_at %}<p>Finalizado em: {{ workout.finished_at }}</p>{% endif %}
-{% else %}
+{% if not workout %}
     <p>Nenhum treino registrado para este dia.</p>
-{% endif %}
-
-{% if not workout or workout.status == "PLANNED" %}
-    <form method="post" action="{% url 'core:start_workout' date_str=workout_date|date:'Y-m-d' %}">
-        {% csrf_token %}
-        <button type="submit">Iniciar treino</button>
-    </form>
-{% elif workout.status != "COMPLETED" %}
-    <form method="post" action="{% url 'core:finish_workout' date_str=workout_date|date:'Y-m-d' %}">
-        {% csrf_token %}
-        <button type="submit">Finalizar treino</button>
-    </form>
 {% endif %}
 
 <h2>Grupos musculares</h2>

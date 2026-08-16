@@ -7,8 +7,6 @@ app_name = "core"
 urlpatterns = [
     path("", views.calendar_view, name="calendar"),
     path("treino/<str:date_str>/", views.workout_day, name="workout_day"),
-    path("treino/<str:date_str>/iniciar/", views.start_workout, name="start_workout"),
-    path("treino/<str:date_str>/finalizar/", views.finish_workout, name="finish_workout"),
     path(
         "treino/<str:date_str>/grupos/adicionar/",
         views.add_muscle_groups,
