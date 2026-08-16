@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ workout_exercise.exercise.name }} | GymNote{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'core:muscle_group' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.workout_muscle_group.pk %}">&larr; Voltar ao grupo muscular</a>
+</p>
+
+<h1>{{ workout_exercise.exercise.name }}</h1>
+<p>Treino {{ workout_exercise.workout_muscle_group.workout.date|date:"d/m/Y" }}</p>
+<p>Grupo: {{ workout_exercise.workout_muscle_group.muscle_group.name }}</p>
+<p><strong>Séries válidas: {{ working_set_count }}</strong></p>
+
+<h2>Séries</h2>
+{% if exercise_sets %}
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr>
+                <th>Série</th>
+                <th>Peso</th>
+                <th>Descrição</th>
+                <th>Repetições</th>
+                <th>Parciais</th>
+                <th>Série válida</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for exercise_set in exercise_sets %}
+                <tr>
+                    <td>{{ exercise_set.order }}</td>
+                    <td>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg }} kg{% else %}-{% endif %}</td>
+                    <td>{{ exercise_set.weight_description|default:"-" }}</td>
+                    <td>{{ exercise_set.reps|default_if_none:"-" }}</td>
+                    <td>{{ exercise_set.partial_reps|default_if_none:"-" }}</td>
+                    <td>{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</td>
+                    <td>
+                        <a href="{% url 'core:edit_set' pk=exercise_set.pk %}">Editar</a>
+                        | <a href="{% url 'core:delete_set' pk=exercise_set.pk %}">Excluir</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Nenhuma série registrada.</p>
+{% endif %}
+
+<h2>Adicionar série</h2>
+<form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
+    {% csrf_token %}
+    {{ set_form.as_p }}
+    <button type="submit">Adicionar série</button>
+</form>
+{% endblock %}

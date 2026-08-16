@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ workout_group.muscle_group.name }} | GymNote{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'core:workout_day' date_str=workout_group.workout.date|date:'Y-m-d' %}">&larr; Voltar ao treino</a>
+</p>
+
+<h1>{{ workout_group.muscle_group.name }}</h1>
+<p>Treino {{ workout_group.workout.date|date:"d/m/Y" }}</p>
+
+<h2>Exercícios adicionados</h2>
+{% if added_exercises %}
+    <ul>
+        {% for workout_exercise in added_exercises %}
+            <li>
+                <a href="{% url 'core:workout_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
+                    {{ workout_exercise.exercise.name }}
+                </a>
+                — {{ workout_exercise.working_sets }} série{{ workout_exercise.working_sets|pluralize }} válida{{ workout_exercise.working_sets|pluralize }}
+                <form method="post" action="{% url 'core:remove_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit">Remover</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>Nenhum exercício adicionado.</p>
+{% endif %}
+
+<h2>Pesquisar exercícios disponíveis</h2>
+<form method="get">
+    <label for="id_q">Nome:</label>
+    <input id="id_q" type="search" name="q" value="{{ query }}">
+    <button type="submit">Pesquisar</button>
+</form>
+
+<h2>Adicionar exercícios</h2>
+{% if exercise_form.fields.exercises.queryset %}
+    <form method="post" action="{% url 'core:add_exercises' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}">
+        {% csrf_token %}
+        {{ exercise_form.as_p }}
+        <button type="submit">Adicionar selecionados</button>
+    </form>
+{% else %}
+    <p>Nenhum exercício disponível para a busca atual.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil | GymNote{% endblock %}
+
+{% block content %}
+<h1>Perfil</h1>
+<p>Nome de usuário: {{ user.username }}</p>
+<p>E-mail: {{ user.email|default:"Não informado" }}</p>
+<p>Quantidade de treinos registrados: {{ workout_count }}</p>
+<form method="post" action="{% url 'accounts:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
+{% endblock %}

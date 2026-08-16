@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário | GymNote{% endblock %}
+
+{% block content %}
+<h1>Calendário</h1>
+
+<p>
+    <a href="?year={{ previous_month.year }}&month={{ previous_month.month }}">&larr; Mês anterior</a>
+    | <strong>{{ month|date:"F Y" }}</strong> |
+    <a href="?year={{ next_month.year }}&month={{ next_month.month }}">Próximo mês &rarr;</a>
+</p>
+
+<table border="1" cellpadding="8">
+    <thead>
+        <tr>
+            <th>SEG</th>
+            <th>TER</th>
+            <th>QUA</th>
+            <th>QUI</th>
+            <th>SEX</th>
+            <th>SÁB</th>
+            <th>DOM</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for week in weeks %}
+            <tr>
+                {% for cell in week %}
+                    <td>
+                        {% if cell.in_month %}
+                            <a href="{% url 'core:workout_day' date_str=cell.date|date:'Y-m-d' %}">
+                                {{ cell.date.day }}{% if cell.workout %} - Treino{% endif %}
+                            </a>
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

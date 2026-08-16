@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Treino {{ workout_date|date:"d/m/Y" }} | GymNote{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}">&larr; Voltar ao calendário</a></p>
+
+<h1>Treino - {{ workout_date|date:"d/m/Y" }}</h1>
+
+{% if workout %}
+    <p>Status: <strong>{{ workout.get_status_display }}</strong></p>
+    {% if workout.started_at %}<p>Iniciado em: {{ workout.started_at }}</p>{% endif %}
+    {% if workout.finished_at %}<p>Finalizado em: {{ workout.finished_at }}</p>{% endif %}
+{% else %}
+    <p>Nenhum treino registrado para este dia.</p>
+{% endif %}
+
+{% if not workout or workout.status == "PLANNED" %}
+    <form method="post" action="{% url 'core:start_workout' date_str=workout_date|date:'Y-m-d' %}">
+        {% csrf_token %}
+        <button type="submit">Iniciar treino</button>
+    </form>
+{% elif workout.status != "COMPLETED" %}
+    <form method="post" action="{% url 'core:finish_workout' date_str=workout_date|date:'Y-m-d' %}">
+        {% csrf_token %}
+        <button type="submit">Finalizar treino</button>
+    </form>
+{% endif %}
+
+<h2>Grupos musculares</h2>
+{% if workout_groups %}
+    <ul>
+        {% for workout_group in workout_groups %}
+            <li>
+                <a href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
+                    {{ workout_group.muscle_group.name }}
+                </a>
+                — {{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>Nenhum grupo muscular adicionado.</p>
+{% endif %}
+
+<h2>Adicionar grupo muscular</h2>
+{% if add_group_form.fields.muscle_groups.queryset %}
+    <form method="post" action="{% url 'core:add_muscle_groups' date_str=workout_date|date:'Y-m-d' %}">
+        {% csrf_token %}
+        {{ add_group_form.as_p }}
+        <button type="submit">Adicionar selecionados</button>
+    </form>
+{% else %}
+    <p>Não há outros grupos disponíveis.</p>
+{% endif %}
+
+{% if workout_groups %}
+    <h2>Remover grupos</h2>
+    <p>A remoção também exclui os exercícios e séries associados.</p>
+    <form method="post" action="{% url 'core:remove_muscle_groups' date_str=workout_date|date:'Y-m-d' %}">
+        {% csrf_token %}
+        {{ remove_group_form.as_p }}
+        <button type="submit">Remover selecionados</button>
+    </form>
+{% endif %}
+{% endblock %}
