@@ -1,13 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Cadastro | GymNote{% endblock %}
+{% block title %}Criar conta | GymNote{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block header %}{% endblock %}
+{% block main_class %}auth-main{% endblock %}
 
 {% block content %}
-<h1>Cadastro</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Criar conta</button>
-</form>
-<p>Já possui conta? <a href="{% url 'accounts:login' %}">Faça login</a>.</p>
+<div class="auth-shell auth-shell--wide">
+    <a class="auth-brand" href="{% url 'accounts:login' %}">{% include "includes/logo_mark.html" %}<strong>GymNote</strong></a>
+    <div class="auth-copy"><p class="eyebrow eyebrow--accent">Comece agora</p><h1>Crie sua conta</h1><p>Organize seus treinos e acompanhe cada série.</p></div>
+    <form method="post" class="auth-card app-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<small class="help-text">{{ field.help_text|safe }}</small>{% endif %}
+                {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        {% endfor %}
+        <button class="button button--primary button--full" type="submit">Criar conta <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
+    </form>
+    <p class="auth-switch">Já possui uma conta? <a href="{% url 'accounts:login' %}">Fazer login</a></p>
+</div>
 {% endblock %}

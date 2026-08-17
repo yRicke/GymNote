@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Login | GymNote{% endblock %}
+{% block title %}Entrar | GymNote{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block header %}{% endblock %}
+{% block main_class %}auth-main{% endblock %}
 
 {% block content %}
-<h1>Login</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-    <button type="submit">Entrar</button>
-</form>
-<p>Não possui conta? <a href="{% url 'accounts:register' %}">Cadastre-se</a>.</p>
+<div class="auth-shell">
+    <a class="auth-brand" href="{% url 'accounts:login' %}">{% include "includes/logo_mark.html" %}<strong>GymNote</strong></a>
+    <div class="auth-copy"><p class="eyebrow eyebrow--accent">Seu treino, registrado</p><h1>Bem-vindo de volta</h1><p>Entre para continuar de onde parou.</p></div>
+    <form method="post" class="auth-card app-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-alert">Usuário ou senha inválidos. Tente novamente.</div>{% endif %}
+        <div class="field"><label for="{{ form.username.id_for_label }}">Nome de usuário</label>{{ form.username }}{% for error in form.username.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="field"><label for="{{ form.password.id_for_label }}">Senha</label>{{ form.password }}{% for error in form.password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <button class="button button--primary button--full" type="submit">Entrar <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
+    </form>
+    <p class="auth-switch">Ainda não tem conta? <a href="{% url 'accounts:register' %}">Criar conta</a></p>
+</div>
 {% endblock %}

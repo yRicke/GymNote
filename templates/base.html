@@ -1,37 +1,53 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#131315">
     <title>{% block title %}GymNote{% endblock %}</title>
+    <link rel="icon" href="{% static 'core/images/favicon.svg' %}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/app.css' %}">
+    {% block extra_head %}{% endblock %}
 </head>
-<body>
-    <header>
-        <strong><a href="{% url 'core:calendar' %}">GymNote</a></strong>
-        {% if user.is_authenticated %}
-            | <a href="{% url 'core:calendar' %}">Calendário</a>
-            | <a href="{% url 'accounts:profile' %}">Perfil</a>
-            | {{ user.username }}
-            | <form method="post" action="{% url 'accounts:logout' %}" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit">Logout</button>
-            </form>
-        {% else %}
-            | <a href="{% url 'accounts:login' %}">Login</a>
-            | <a href="{% url 'accounts:register' %}">Cadastro</a>
+<body class="{% block body_class %}{% endblock %}">
+    {% block header %}
+        <header class="app-header">
+            <div class="app-header__inner">
+                {% block header_leading %}
+                    <a class="brand" href="{% url 'core:calendar' %}" aria-label="GymNote - Calendário">
+                        {% include "includes/logo_mark.html" %}
+                        <span>{% block header_title %}GymNote{% endblock %}</span>
+                    </a>
+                {% endblock %}
+                {% if user.is_authenticated %}
+                    <a class="icon-button" href="{% url 'accounts:profile' %}" aria-label="Abrir perfil">
+                        <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+    {% endblock %}
+
+    <main class="{% block main_class %}app-main{% endblock %}">
+        {% if messages %}
+            <div class="messages" aria-live="polite">
+                {% for message in messages %}
+                    <div class="message message--{{ message.tags|default:'info' }}">
+                        <span class="material-symbols-outlined" aria-hidden="true">{% if message.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
-    </header>
-
-    {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    <main>
         {% block content %}{% endblock %}
     </main>
+
+    {% if user.is_authenticated %}
+        {% include "includes/bottom_nav.html" %}
+    {% endif %}
 </body>
 </html>

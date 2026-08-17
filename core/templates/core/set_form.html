@@ -1,15 +1,32 @@
 {% extends "base.html" %}
 
 {% block title %}Editar série | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:workout_exercise' date_str=exercise_set.workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=exercise_set.workout_exercise.pk %}" aria-label="Voltar ao exercício"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>Editar série</span></span>
+    </div>
+{% endblock %}
 
 {% block content %}
-<p>
-    <a href="{% url 'core:workout_exercise' date_str=exercise_set.workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=exercise_set.workout_exercise.pk %}">&larr; Voltar ao exercício</a>
-</p>
-<h1>Editar série {{ exercise_set.order }}</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Salvar</button>
-</form>
+<div class="page-shell page-shell--narrow">
+    <section class="page-heading">
+        <p class="eyebrow">{{ exercise_set.workout_exercise.exercise.name }}</p>
+        <h1>Editar série {{ exercise_set.order }}</h1>
+        <p>Ajuste os dados registrados nesta série.</p>
+    </section>
+    <section class="panel">
+        <form method="post" class="app-form">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="form-grid">
+                <div class="field"><label for="{{ form.weight_kg.id_for_label }}">{{ form.weight_kg.label }}</label>{{ form.weight_kg }}{% for error in form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                <div class="field"><label for="{{ form.reps.id_for_label }}">{{ form.reps.label }}</label>{{ form.reps }}{% for error in form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                <div class="field"><label for="{{ form.partial_reps.id_for_label }}">{{ form.partial_reps.label }}</label>{{ form.partial_reps }}{% for error in form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+            </div>
+            <label class="toggle-field" for="{{ form.is_working_set.id_for_label }}"><span><strong>Série válida</strong><small>Conta como série de trabalho.</small></span>{{ form.is_working_set }}<span class="toggle" aria-hidden="true"></span></label>
+            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">save</span> Salvar alterações</button>
+        </form>
+    </section>
+</div>
 {% endblock %}

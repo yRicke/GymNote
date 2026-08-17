@@ -74,6 +74,9 @@ def calendar_view(request):
             user=request.user,
             date__year=year,
             date__month=month,
+        ).prefetch_related(
+            "workout_muscle_groups__muscle_group",
+            "workout_muscle_groups__workout_exercises",
         )
     }
     weeks = []
@@ -84,6 +87,7 @@ def calendar_view(request):
                     "date": day,
                     "in_month": day.month == month,
                     "workout": workouts.get(day),
+                    "is_today": day == today,
                 }
                 for day in week
             ]
@@ -98,6 +102,8 @@ def calendar_view(request):
             "weeks": weeks,
             "previous_month": previous_month,
             "next_month": next_month,
+            "today": today,
+            "today_workout": workouts.get(today),
         },
     )
 

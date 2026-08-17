@@ -1,54 +1,69 @@
 {% extends "base.html" %}
 
 {% block title %}{{ workout_exercise.exercise.name }} | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:muscle_group' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.workout_muscle_group.pk %}" aria-label="Voltar ao grupo muscular"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>Registrar séries</span></span>
+    </div>
+{% endblock %}
 
 {% block content %}
-<p>
-    <a href="{% url 'core:muscle_group' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.workout_muscle_group.pk %}">&larr; Voltar ao grupo muscular</a>
-</p>
+<div class="page-shell workout-log">
+    <section class="page-heading">
+        <p class="eyebrow">{{ workout_exercise.workout_muscle_group.muscle_group.name }} · {{ workout_exercise.workout_muscle_group.workout.date|date:"d/m" }}</p>
+        <h1>{{ workout_exercise.exercise.name }}</h1>
+        <div class="metrics-row">
+            <div class="metric-tile"><span>Séries</span><strong>{{ exercise_sets|length }}</strong></div>
+            <div class="metric-tile metric-tile--accent"><span>Válidas</span><strong>{{ working_set_count }}</strong></div>
+        </div>
+        <span class="sr-only">Séries válidas: {{ working_set_count }}</span>
+    </section>
 
-<h1>{{ workout_exercise.exercise.name }}</h1>
-<p>Treino {{ workout_exercise.workout_muscle_group.workout.date|date:"d/m/Y" }}</p>
-<p>Grupo: {{ workout_exercise.workout_muscle_group.muscle_group.name }}</p>
-<p><strong>Séries válidas: {{ working_set_count }}</strong></p>
+    <section class="content-section">
+        <div class="section-heading"><h2>Séries registradas</h2><span class="pill">ordem de execução</span></div>
+        {% if exercise_sets %}
+            <div class="sets-table-wrap">
+                <table class="sets-table">
+                    <thead><tr><th>Série</th><th>kg</th><th>Reps</th><th>Parciais</th><th>Válida</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                    <tbody>
+                        {% for exercise_set in exercise_sets %}
+                            <tr class="{% if exercise_set.is_working_set %}is-working{% endif %}">
+                                <td data-label="Série"><span class="set-number">{{ exercise_set.order }}</span></td>
+                                <td data-label="Peso"><strong>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg|floatformat:"-2" }}{% else %}—{% endif %}</strong></td>
+                                <td data-label="Reps"><strong>{{ exercise_set.reps|default_if_none:"—" }}</strong></td>
+                                <td data-label="Parciais">{{ exercise_set.partial_reps|default_if_none:"—" }}</td>
+                                <td data-label="Válida"><span class="working-mark {% if exercise_set.is_working_set %}is-active{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">check</span><span class="sr-only">{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</span></span></td>
+                                <td class="set-actions">
+                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar série {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
+                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir série {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state empty-state--compact"><span class="material-symbols-outlined" aria-hidden="true">data_table</span><p>Registre a primeira série deste exercício.</p></div>
+        {% endif %}
+    </section>
 
-<h2>Séries</h2>
-{% if exercise_sets %}
-    <table border="1" cellpadding="6">
-        <thead>
-            <tr>
-                <th>Série</th>
-                <th>Peso</th>
-                <th>Repetições</th>
-                <th>Parciais</th>
-                <th>Série válida</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for exercise_set in exercise_sets %}
-                <tr>
-                    <td>{{ exercise_set.order }}</td>
-                    <td>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg }} kg{% else %}-{% endif %}</td>
-                    <td>{{ exercise_set.reps|default_if_none:"-" }}</td>
-                    <td>{{ exercise_set.partial_reps|default_if_none:"-" }}</td>
-                    <td>{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</td>
-                    <td>
-                        <a href="{% url 'core:edit_set' pk=exercise_set.pk %}">Editar</a>
-                        | <a href="{% url 'core:delete_set' pk=exercise_set.pk %}">Excluir</a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Nenhuma série registrada.</p>
-{% endif %}
-
-<h2>Adicionar série</h2>
-<form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
-    {% csrf_token %}
-    {{ set_form.as_p }}
-    <button type="submit">Adicionar série</button>
-</form>
+    <section class="content-section panel set-entry">
+        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Próxima série</p><h2>Adicionar série</h2></div><span class="material-symbols-outlined" aria-hidden="true">add_circle</span></div>
+        <form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" class="app-form">
+            {% csrf_token %}
+            {{ set_form.non_field_errors }}
+            <div class="form-grid form-grid--three">
+                <div class="field"><label for="{{ set_form.weight_kg.id_for_label }}">{{ set_form.weight_kg.label }}</label>{{ set_form.weight_kg }}{% for error in set_form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                <div class="field"><label for="{{ set_form.reps.id_for_label }}">{{ set_form.reps.label }}</label>{{ set_form.reps }}{% for error in set_form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                <div class="field"><label for="{{ set_form.partial_reps.id_for_label }}">Parciais</label>{{ set_form.partial_reps }}{% for error in set_form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+            </div>
+            <label class="toggle-field" for="{{ set_form.is_working_set.id_for_label }}">
+                <span><strong>Série válida</strong><small>Marque apenas séries de trabalho.</small></span>
+                {{ set_form.is_working_set }}<span class="toggle" aria-hidden="true"></span>
+            </label>
+            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar série</button>
+        </form>
+    </section>
+</div>
 {% endblock %}

@@ -44,3 +44,14 @@ class ExerciseSetForm(forms.ModelForm):
             "partial_reps": "Repetições parciais",
             "is_working_set": "Série válida/de trabalho",
         }
+        widgets = {
+            "weight_kg": forms.NumberInput(
+                attrs={"placeholder": "0", "inputmode": "decimal", "step": "0.01"}
+            ),
+            "reps": forms.NumberInput(
+                attrs={"placeholder": "0", "inputmode": "numeric"}
+            ),
+            "partial_reps": forms.NumberInput(
+                attrs={"placeholder": "0", "inputmode": "numeric"}
+            ),
+        }
