@@ -150,6 +150,35 @@ class WorkoutFlowTests(TestCase):
         )
         self.assertEqual(workout_group.order, 1)
 
+    def test_adding_multiple_groups_redirects_to_workout_day(self):
+        posterior = MuscleGroup.objects.create(
+            name="Posterior de Coxa", slug="posterior-de-coxa", order=2
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:add_muscle_groups",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+            {"add-muscle_groups": [self.quadriceps.pk, posterior.pk]},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+        )
+        self.assertEqual(
+            WorkoutMuscleGroup.objects.filter(
+                workout__user=self.user_a,
+                workout__date=self.workout_date,
+            ).count(),
+            2,
+        )
+
     def test_removing_last_group_deletes_empty_workout(self):
         workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
         workout_group = WorkoutMuscleGroup.objects.create(
@@ -233,6 +262,34 @@ class WorkoutFlowTests(TestCase):
                 kwargs={"date_str": "2026-08-14", "pk": workout_exercise.pk},
             ),
         )
+
+    def test_adding_multiple_exercises_redirects_to_muscle_group(self):
+        second_exercise = Exercise.objects.create(name="Leg Press")
+        second_exercise.muscle_groups.add(self.quadriceps)
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        workout_group = WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:add_exercises",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+            {"exercises": [self.exercise.pk, second_exercise.pk]},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+        )
+        self.assertEqual(workout_group.workout_exercises.count(), 2)
 
     def test_profile_ignores_workout_without_groups(self):
         Workout.objects.create(user=self.user_a, date=self.workout_date)
