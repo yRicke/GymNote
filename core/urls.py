@@ -5,7 +5,8 @@ from . import views
 app_name = "core"
 
 urlpatterns = [
-    path("", views.calendar_view, name="calendar"),
+    path("", views.landing_page, name="landing"),
+    path("calendario/", views.calendar_view, name="calendar"),
     path("treino/<str:date_str>/", views.workout_day, name="workout_day"),
     path(
         "treino/<str:date_str>/grupos/adicionar/",

@@ -46,8 +46,11 @@
         {% block content %}{% endblock %}
     </main>
 
-    {% if user.is_authenticated %}
-        {% include "includes/bottom_nav.html" %}
-    {% endif %}
+    {% block bottom_nav %}
+        {% if user.is_authenticated %}
+            {% include "includes/bottom_nav.html" %}
+        {% endif %}
+    {% endblock %}
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

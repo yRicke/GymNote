@@ -56,6 +56,10 @@ def _owned_workout_exercise(user, date_str, pk):
     )
 
 
+def landing_page(request):
+    return render(request, "core/landing.html")
+
+
 @login_required
 def calendar_view(request):
     today = timezone.localdate()

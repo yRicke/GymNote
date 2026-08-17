@@ -18,6 +18,33 @@ from .models import (
 )
 
 
+class LandingPageTests(TestCase):
+    def test_landing_page_is_public_and_includes_parallax(self):
+        response = self.client.get(reverse("core:landing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Seu treino.")
+        self.assertContains(response, "data-parallax-speed")
+        self.assertContains(response, "core/js/landing.js")
+        self.assertContains(response, reverse("accounts:register"))
+
+    def test_authenticated_landing_links_to_calendar_without_bottom_nav(self):
+        user = User.objects.create_user("landing_user", password="senha-teste-123")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("core:landing"))
+
+        self.assertContains(response, "Abrir meu calendário")
+        self.assertContains(response, reverse("core:calendar"))
+        self.assertNotContains(response, 'class="bottom-nav"')
+
+    def test_calendar_remains_protected_at_dedicated_url(self):
+        response = self.client.get(reverse("core:calendar"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+
+
 class WorkoutFlowTests(TestCase):
     workout_date = date(2026, 8, 14)
 
