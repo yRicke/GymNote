@@ -278,7 +278,10 @@ h3 { margin-bottom: 6px; font-size: 1rem; }
 .button--danger:hover { background: var(--danger-container); }
 .button-stack { display: grid; gap: 10px; }
 
-.content-section { margin-top: 32px; }
+.content-section { 
+    margin-top: 32px;
+    margin-bottom: 32px;
+}
 .content-section:first-of-type { margin-top: 0; }
 .panel { padding: 20px; }
 
