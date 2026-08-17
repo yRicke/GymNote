@@ -314,6 +314,49 @@ class WorkoutFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_group_page_counts_total_and_working_sets(self):
+        _, workout_group, first_entry = self.create_exercise_entry()
+        second_exercise = Exercise.objects.create(name="Leg Press")
+        second_exercise.muscle_groups.add(self.quadriceps)
+        second_entry = WorkoutExercise.objects.create(
+            workout_muscle_group=workout_group,
+            exercise=second_exercise,
+            order=2,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=first_entry,
+            order=1,
+            is_working_set=False,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=first_entry,
+            order=2,
+            is_working_set=True,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=second_entry,
+            order=1,
+            is_working_set=True,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=second_entry,
+            order=2,
+            is_working_set=True,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            )
+        )
+
+        self.assertEqual(response.context["total_set_count"], 4)
+        self.assertEqual(response.context["working_set_count"], 3)
+        self.assertContains(response, "<span>Séries</span><strong>4</strong>", html=True)
+        self.assertContains(response, "<span>Válidas</span><strong>3</strong>", html=True)
+
     def test_cannot_create_two_workouts_for_same_user_and_date(self):
         Workout.objects.create(user=self.user_a, date=self.workout_date)
 
