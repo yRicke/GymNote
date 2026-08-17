@@ -109,31 +109,12 @@ h3 { margin-bottom: 6px; font-size: 1rem; }
 .brand { font-size: 1rem; font-weight: 650; }
 
 .logo-mark {
-    position: relative;
-    display: inline-grid;
+    display: block;
     flex: 0 0 auto;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, .7);
-    border-radius: 2px;
-    background: #f4f4f2;
+    width: 44px;
+    height: 30px;
+    object-fit: contain;
 }
-
-.logo-mark::before,
-.logo-mark::after,
-.logo-mark__line {
-    position: absolute;
-    width: 14px;
-    height: 2px;
-    content: "";
-    background: #2c2c30;
-}
-
-.logo-mark::before { transform: translateY(-4px); }
-.logo-mark::after { transform: translateY(4px); }
-.logo-mark__line { width: 18px; background: var(--accent); }
 
 .icon-button {
     display: inline-grid;
