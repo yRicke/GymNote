@@ -29,11 +29,11 @@
             {% for week in weeks %}
                 {% for cell in week %}
                     {% if cell.in_month %}
-                        <a class="calendar-day {% if cell.is_today %}is-today{% endif %} {% if cell.workout %}has-workout{% endif %}"
+                        <a class="calendar-day {% if cell.is_today %}is-today{% endif %} {% if cell.has_workout_groups %}has-workout{% endif %}"
                            href="{% url 'core:workout_day' date_str=cell.date|date:'Y-m-d' %}"
-                           aria-label="{{ cell.date|date:'d \d\e F' }}{% if cell.workout %}, com treino registrado{% endif %}">
+                           aria-label="{{ cell.date|date:'d \d\e F' }}{% if cell.has_workout_groups %}, com treino registrado{% endif %}">
                             <span>{{ cell.date.day }}</span>
-                            {% if cell.workout %}<span class="calendar-day__dot" aria-hidden="true"></span>{% endif %}
+                            {% if cell.has_workout_groups %}<span class="calendar-day__dot" aria-hidden="true"></span>{% endif %}
                         </a>
                     {% else %}
                         <span class="calendar-day calendar-day--empty" aria-hidden="true"></span>
