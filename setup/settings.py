@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -81,7 +82,11 @@ WSGI_APPLICATION = 'setup.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-database_url = os.environ.get('DATABASE_URL')
+database_url = (
+    os.environ.get('DATABASE_URL')
+    if 'collectstatic' not in sys.argv
+    else None
+)
 if database_url:
     DATABASES = {
         'default': dj_database_url.parse(
