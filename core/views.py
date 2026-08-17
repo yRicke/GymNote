@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -195,13 +196,25 @@ def add_muscle_groups(request, date_str):
     return redirect("core:workout_day", date_str=date_str)
 
 
-@require_POST
 @login_required
 def remove_muscle_group(request, date_str, pk):
     workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
-    workout_group.delete()
-    messages.success(request, "Grupo muscular removido.")
-    return redirect("core:workout_day", date_str=date_str)
+    if request.method == "POST":
+        workout_group.delete()
+        messages.success(request, "Grupo muscular removido.")
+        return redirect("core:workout_day", date_str=date_str)
+
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir grupo muscular",
+            "item_type": "grupo muscular",
+            "item_name": workout_group.muscle_group.name,
+            "warning": "Os exercícios e as séries deste grupo também serão excluídos.",
+            "cancel_url": reverse("core:workout_day", kwargs={"date_str": date_str}),
+        },
+    )
 
 
 @login_required
@@ -267,14 +280,29 @@ def add_exercises(request, date_str, pk):
     return redirect("core:muscle_group", date_str=date_str, pk=pk)
 
 
-@require_POST
 @login_required
 def remove_exercise(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
     workout_group_id = workout_exercise.workout_muscle_group_id
-    workout_exercise.delete()
-    messages.success(request, "Exercício removido.")
-    return redirect("core:muscle_group", date_str=date_str, pk=workout_group_id)
+    if request.method == "POST":
+        workout_exercise.delete()
+        messages.success(request, "Exercício removido.")
+        return redirect("core:muscle_group", date_str=date_str, pk=workout_group_id)
+
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir exercício",
+            "item_type": "exercício",
+            "item_name": workout_exercise.exercise.name,
+            "warning": "Todas as séries registradas neste exercício também serão excluídas.",
+            "cancel_url": reverse(
+                "core:muscle_group",
+                kwargs={"date_str": date_str, "pk": workout_group_id},
+            ),
+        },
+    )
 
 
 @login_required

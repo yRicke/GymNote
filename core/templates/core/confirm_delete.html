@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{{ cancel_url }}" aria-label="Cancelar exclusão e voltar"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>{{ page_title }}</span></span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell page-shell--narrow confirm-page">
+    <section class="confirmation-card">
+        <span class="confirmation-card__icon material-symbols-outlined" aria-hidden="true">delete</span>
+        <p class="eyebrow">{{ item_type }}</p>
+        <h1>Excluir {{ item_name }}?</h1>
+        <p>{{ warning }}</p>
+        <form method="post" class="button-stack">
+            {% csrf_token %}
+            <button class="button button--danger button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">delete</span> Confirmar exclusão</button>
+            <a class="button button--ghost button--full" href="{{ cancel_url }}">Cancelar</a>
+        </form>
+    </section>
+</div>
+{% endblock %}
