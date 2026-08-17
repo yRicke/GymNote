@@ -155,6 +155,51 @@ class WorkoutFlowTests(TestCase):
             ),
         )
 
+    def test_workout_list_filters_by_muscle_group_name(self):
+        posterior = MuscleGroup.objects.create(
+            name="Posterior de Coxa",
+            slug="posterior-de-coxa",
+            order=2,
+        )
+        quadriceps_workout = Workout.objects.create(
+            user=self.user_a,
+            date=self.workout_date,
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=quadriceps_workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        posterior_workout = Workout.objects.create(
+            user=self.user_a,
+            date=date(2026, 8, 15),
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=posterior_workout,
+            muscle_group=posterior,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("core:workouts"), {"q": "  quad  "})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["query"], "quad")
+        self.assertEqual(list(response.context["workouts"]), [quadriceps_workout])
+        self.assertContains(response, "Quadríceps")
+        self.assertNotContains(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": posterior_workout.date.isoformat()},
+            ),
+        )
+
+        no_results = self.client.get(reverse("core:workouts"), {"q": "Peito"})
+
+        self.assertContains(no_results, "Nenhum treino encontrado")
+        self.assertQuerySetEqual(no_results.context["workouts"], [])
+
     def test_opening_empty_day_does_not_create_workout(self):
         self.client.force_login(self.user_a)
 
