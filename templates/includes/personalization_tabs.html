@@ -1,0 +1,12 @@
+<nav class="tab-nav" aria-label="Seções de personalização">
+    <a class="tab-nav__item {% if active_personalization_tab == 'exercises' %}is-active{% endif %}"
+       href="{% url 'core:personalization' %}"
+       {% if active_personalization_tab == 'exercises' %}aria-current="page"{% endif %}>
+        Meus exercícios
+    </a>
+    <a class="tab-nav__item {% if active_personalization_tab == 'presets' %}is-active{% endif %}"
+       href="{% url 'core:personalization_presets' %}"
+       {% if active_personalization_tab == 'presets' %}aria-current="page"{% endif %}>
+        Predefinições de treino
+    </a>
+</nav>

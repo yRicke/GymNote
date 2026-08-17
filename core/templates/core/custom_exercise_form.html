@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:personalization' %}" aria-label="Voltar aos exercícios personalizados">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </a>
+        <span class="brand">{{ page_title }}</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell page-shell--narrow">
+    <section class="page-heading">
+        <p class="eyebrow eyebrow--accent">Catálogo pessoal</p>
+        <h1>{{ page_title }}</h1>
+        <p>O exercício ficará disponível apenas para você.</p>
+    </section>
+
+    <section class="panel">
+        <form method="post" class="app-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="field">
+                {{ form.name.label_tag }}
+                {{ form.name }}
+                {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="field">
+                {{ form.muscle_group.label_tag }}
+                {{ form.muscle_group }}
+                {% for error in form.muscle_group.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="button-stack">
+                <button class="button button--primary button--full" type="submit">Salvar exercício</button>
+                <a class="button button--ghost button--full" href="{% url 'core:personalization' %}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

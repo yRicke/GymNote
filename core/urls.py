@@ -8,6 +8,42 @@ urlpatterns = [
     path("", views.landing_page, name="landing"),
     path("calendario/", views.calendar_view, name="calendar"),
     path("treinos/", views.workout_list, name="workouts"),
+    path("personalizacao/", views.personalization, name="personalization"),
+    path(
+        "personalizacao/exercicios/novo/",
+        views.custom_exercise_create,
+        name="personalization_exercise_create",
+    ),
+    path(
+        "personalizacao/exercicios/<int:pk>/editar/",
+        views.custom_exercise_edit,
+        name="personalization_exercise_edit",
+    ),
+    path(
+        "personalizacao/exercicios/<int:pk>/excluir/",
+        views.custom_exercise_delete,
+        name="personalization_exercise_delete",
+    ),
+    path(
+        "personalizacao/predefinicoes/",
+        views.workout_preset_list,
+        name="personalization_presets",
+    ),
+    path(
+        "personalizacao/predefinicoes/nova/",
+        views.workout_preset_create,
+        name="personalization_preset_create",
+    ),
+    path(
+        "personalizacao/predefinicoes/<int:pk>/editar/",
+        views.workout_preset_edit,
+        name="personalization_preset_edit",
+    ),
+    path(
+        "personalizacao/predefinicoes/<int:pk>/excluir/",
+        views.workout_preset_delete,
+        name="personalization_preset_delete",
+    ),
     path("treino/<str:date_str>/", views.workout_day, name="workout_day"),
     path(
         "treino/<str:date_str>/grupos/adicionar/",
@@ -18,6 +54,11 @@ urlpatterns = [
         "treino/<str:date_str>/grupo/<int:pk>/remover/",
         views.remove_muscle_group,
         name="remove_muscle_group",
+    ),
+    path(
+        "treino/<str:date_str>/grupo/<int:pk>/predefinicao/",
+        views.workout_group_preset_offer,
+        name="workout_group_preset_offer",
     ),
     path(
         "treino/<str:date_str>/grupo/<int:pk>/",
