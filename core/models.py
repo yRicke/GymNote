@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import post_delete
@@ -19,15 +20,113 @@ class MuscleGroup(models.Model):
 
 
 class Exercise(models.Model):
-    name = models.CharField(max_length=150, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="custom_exercises",
+        null=True,
+        blank=True,
+    )
+    name = models.CharField(max_length=150)
     muscle_groups = models.ManyToManyField(MuscleGroup, related_name="exercises")
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name"],
+                condition=models.Q(user__isnull=True),
+                name="unique_system_exercise_name",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                condition=models.Q(user__isnull=False, is_active=True),
+                name="unique_active_custom_exercise_name_per_user",
+            ),
+        ]
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_custom(self):
+        return self.user_id is not None
+
+
+class WorkoutPreset(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="workout_presets",
+    )
+    name = models.CharField(max_length=120)
+    muscle_group = models.ForeignKey(
+        MuscleGroup,
+        on_delete=models.PROTECT,
+        related_name="workout_presets",
+    )
+    exercises = models.ManyToManyField(
+        Exercise,
+        through="WorkoutPresetExercise",
+        related_name="workout_presets",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                name="unique_workout_preset_name_per_user",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.muscle_group}"
+
+
+class WorkoutPresetExercise(models.Model):
+    preset = models.ForeignKey(
+        WorkoutPreset,
+        on_delete=models.CASCADE,
+        related_name="exercise_entries",
+    )
+    exercise = models.ForeignKey(
+        Exercise,
+        on_delete=models.PROTECT,
+        related_name="preset_entries",
+    )
+    order = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["preset", "exercise"],
+                name="unique_exercise_per_workout_preset",
+            ),
+            models.UniqueConstraint(
+                fields=["preset", "order"],
+                name="unique_exercise_order_per_workout_preset",
+            ),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.preset_id and self.exercise_id:
+            if not self.exercise.muscle_groups.filter(
+                pk=self.preset.muscle_group_id
+            ).exists():
+                errors["exercise"] = "O exercício não pertence ao grupo da predefinição."
+            if self.exercise.user_id not in (None, self.preset.user_id):
+                errors["exercise"] = "O exercício não está disponível para este usuário."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.preset} - {self.exercise}"
 
 
 class Workout(models.Model):
