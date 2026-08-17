@@ -6,7 +6,7 @@
         <a class="icon-button" href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}" aria-label="Voltar ao calendário">
             <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
         </a>
-        <a class="brand" href="{% url 'core:calendar' %}">{% include "includes/logo_mark.html" %}<span>Treinos</span></a>
+        <a class="brand" href="{% url 'core:workouts' %}">{% include "includes/logo_mark.html" %}<span>Treinos</span></a>
     </div>
 {% endblock %}
 

@@ -86,6 +86,75 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response.url)
 
+    def test_unauthenticated_user_cannot_access_workout_list(self):
+        response = self.client.get(reverse("core:workouts"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+
+    def test_workout_list_only_shows_owned_workouts_with_groups(self):
+        older_workout = Workout.objects.create(
+            user=self.user_a,
+            date=self.workout_date,
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=older_workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        ghost_workout = Workout.objects.create(
+            user=self.user_a,
+            date=date(2026, 8, 15),
+        )
+        other_users_workout = Workout.objects.create(
+            user=self.user_b,
+            date=date(2026, 8, 16),
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=other_users_workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        newer_workout = Workout.objects.create(
+            user=self.user_a,
+            date=date(2026, 8, 17),
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=newer_workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("core:workouts"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context["workouts"]),
+            [newer_workout, older_workout],
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": older_workout.date.isoformat()},
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": ghost_workout.date.isoformat()},
+            ),
+        )
+        self.assertNotContains(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": other_users_workout.date.isoformat()},
+            ),
+        )
+
     def test_opening_empty_day_does_not_create_workout(self):
         self.client.force_login(self.user_a)
 

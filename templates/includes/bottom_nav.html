@@ -1,10 +1,16 @@
 <nav class="bottom-nav" aria-label="Navegação principal">
     <div class="bottom-nav__inner">
-        <a class="bottom-nav__item {% if request.resolver_match.namespace == 'core' %}is-active{% endif %}"
+        <a class="bottom-nav__item {% if request.resolver_match.url_name == 'calendar' %}is-active{% endif %}"
            href="{% url 'core:calendar' %}"
-           {% if request.resolver_match.namespace == 'core' %}aria-current="page"{% endif %}>
+           {% if request.resolver_match.url_name == 'calendar' %}aria-current="page"{% endif %}>
             <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
             <span>Calendário</span>
+        </a>
+        <a class="bottom-nav__item {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name != 'calendar' and request.resolver_match.url_name != 'landing' %}is-active{% endif %}"
+           href="{% url 'core:workouts' %}"
+           {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name != 'calendar' and request.resolver_match.url_name != 'landing' %}aria-current="page"{% endif %}>
+            <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
+            <span>Treinos</span>
         </a>
         <a class="bottom-nav__item {% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}"
            href="{% url 'accounts:profile' %}"
