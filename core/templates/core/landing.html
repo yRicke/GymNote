@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}GymNote | Seu treino, finalmente organizado{% endblock %}
+{% block body_class %}landing-page{% endblock %}
+{% block main_class %}landing-main{% endblock %}
+{% block bottom_nav %}{% endblock %}
+
+{% block extra_head %}
+    <meta name="description" content="Registre seus treinos, exercícios, pesos, repetições e séries válidas sem depender do bloco de notas.">
+    <link rel="stylesheet" href="{% static 'core/css/landing.css' %}">
+{% endblock %}
+
+{% block header %}
+<header class="landing-header" data-landing-header>
+    <div class="landing-container landing-header__inner">
+        <a class="landing-brand" href="{% url 'core:landing' %}" aria-label="GymNote - início">
+            {% include "includes/logo_mark.html" %}
+            <span>GymNote</span>
+        </a>
+        <nav class="landing-nav" aria-label="Navegação da página inicial">
+            <a href="#produto">Produto</a>
+            <a href="#como-funciona">Como funciona</a>
+        </nav>
+        <div class="landing-header__actions">
+            {% if user.is_authenticated %}
+                <a class="landing-link" href="{% url 'accounts:profile' %}">Perfil</a>
+                <a class="landing-button landing-button--compact" href="{% url 'core:calendar' %}">Abrir calendário</a>
+            {% else %}
+                <a class="landing-link" href="{% url 'accounts:login' %}">Entrar</a>
+                <a class="landing-button landing-button--compact" href="{% url 'accounts:register' %}">Criar conta</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<section class="landing-hero" id="topo" aria-labelledby="landing-title" data-parallax-root>
+    <div class="landing-hero__sky" aria-hidden="true"></div>
+    <div class="landing-hero__orb landing-parallax" data-parallax-speed="0.06" aria-hidden="true"></div>
+
+    <svg class="landing-hero__layer landing-hero__layer--far landing-parallax" data-parallax-speed="0.10" viewBox="0 0 1440 620" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+            <linearGradient id="mountain-far" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#493863" stop-opacity=".7"/>
+                <stop offset="1" stop-color="#1b1428" stop-opacity=".92"/>
+            </linearGradient>
+        </defs>
+        <path d="M0 386L111 312L206 356L340 208L438 328L566 239L681 353L808 184L936 325L1053 246L1174 353L1301 229L1440 342V620H0Z" fill="url(#mountain-far)"/>
+    </svg>
+
+    <svg class="landing-hero__layer landing-hero__layer--middle landing-parallax" data-parallax-speed="0.18" viewBox="0 0 1440 620" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+            <linearGradient id="mountain-middle" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#2e2441"/>
+                <stop offset="1" stop-color="#111014"/>
+            </linearGradient>
+        </defs>
+        <path d="M0 448L158 306L258 404L419 256L566 423L742 288L862 405L1030 248L1194 405L1322 318L1440 399V620H0Z" fill="url(#mountain-middle)"/>
+    </svg>
+
+    <div class="landing-hero__content landing-container landing-parallax" data-parallax-speed="0.28">
+        <p class="landing-kicker"><span></span> Precisão para cada série</p>
+        <h1 id="landing-title">Seu treino.<br><em>Finalmente organizado.</em></h1>
+        <p class="landing-hero__lead">Troque anotações soltas por um registro rápido de exercícios, pesos, repetições e séries válidas.</p>
+        <div class="landing-hero__actions">
+            {% if user.is_authenticated %}
+                <a class="landing-button landing-button--large" href="{% url 'core:calendar' %}">
+                    Abrir meu calendário
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                </a>
+            {% else %}
+                <a class="landing-button landing-button--large" href="{% url 'accounts:register' %}">
+                    Criar conta
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                </a>
+                <a class="landing-button landing-button--ghost landing-button--large" href="{% url 'accounts:login' %}">Já tenho uma conta</a>
+            {% endif %}
+        </div>
+        <div class="landing-hero__meta" aria-label="Principais benefícios">
+            <span><i class="material-symbols-outlined" aria-hidden="true">check</i> Registro rápido</span>
+            <span><i class="material-symbols-outlined" aria-hidden="true">check</i> Histórico por dia</span>
+            <span><i class="material-symbols-outlined" aria-hidden="true">check</i> Sem distrações</span>
+        </div>
+    </div>
+
+    <svg class="landing-hero__layer landing-hero__layer--front landing-parallax" data-parallax-speed="0.08" viewBox="0 0 1440 480" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 302L103 260L206 301L321 201L432 294L552 223L681 307L812 211L933 292L1071 187L1184 288L1325 236L1440 292V480H0Z" fill="#0b0b0e"/>
+        <path d="M0 380L192 320L328 371L492 298L667 370L831 308L1003 376L1188 301L1440 367V480H0Z" fill="#08080a"/>
+    </svg>
+    <div class="landing-hero__fade" aria-hidden="true"></div>
+    <a class="landing-scroll-hint" href="#produto" aria-label="Conhecer o produto">
+        <span>Explore</span>
+        <i class="material-symbols-outlined" aria-hidden="true">south</i>
+    </a>
+</section>
+
+<section class="landing-section landing-product" id="produto" aria-labelledby="product-title">
+    <div class="landing-container">
+        <div class="landing-section__heading">
+            <p class="landing-kicker"><span></span> A interface</p>
+            <h2 id="product-title">Pensada para o ritmo da academia.</h2>
+            <p>Grandes áreas de toque, pouca digitação e cada informação no lugar certo.</p>
+        </div>
+
+        <div class="product-grid">
+            <article class="product-card product-card--calendar">
+                <div class="product-card__copy">
+                    <span class="product-card__number">01</span>
+                    <div><p class="landing-label">Calendário</p><h3>Todo treino começa pelo dia.</h3></div>
+                </div>
+                <div class="calendar-demo" aria-hidden="true">
+                    <div class="calendar-demo__top"><strong>Agosto</strong><span>2026</span></div>
+                    <div class="calendar-demo__week"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div>
+                    <div class="calendar-demo__days">
+                        <span></span><span></span><span></span><span></span><span></span><b>1</b><b>2</b>
+                        <b>3</b><b>4</b><b>5</b><b>6</b><b>7</b><b>8</b><b>9</b>
+                        <b>10</b><b>11</b><b>12</b><b>13</b><b class="is-active">14<i></i></b><b>15</b><b>16</b>
+                    </div>
+                </div>
+            </article>
+
+            <article class="product-card product-card--workout">
+                <div class="product-card__copy">
+                    <span class="product-card__number">02</span>
+                    <div><p class="landing-label">Treino</p><h3>Grupos e exercícios sem bagunça.</h3></div>
+                </div>
+                <div class="workout-demo" aria-hidden="true">
+                    <div class="workout-demo__header"><span>SEX, 14 AGO</span><strong>Leg Day</strong></div>
+                    <div class="workout-demo__group"><i class="material-symbols-outlined">fitness_center</i><span><b>Quadríceps</b><small>4 exercícios</small></span><i class="material-symbols-outlined">chevron_right</i></div>
+                    <div class="workout-demo__group"><i class="material-symbols-outlined">fitness_center</i><span><b>Posterior</b><small>3 exercícios</small></span><i class="material-symbols-outlined">chevron_right</i></div>
+                </div>
+            </article>
+
+            <article class="product-card product-card--sets">
+                <div class="product-card__copy">
+                    <span class="product-card__number">03</span>
+                    <div><p class="landing-label">Séries</p><h3>Peso e repetições em segundos.</h3></div>
+                </div>
+                <div class="sets-demo" aria-hidden="true">
+                    <div class="sets-demo__title"><span>Agachamento livre</span><small>1 série válida</small></div>
+                    <div class="sets-demo__row"><span>01</span><strong>20 kg</strong><em>10 reps</em><i class="material-symbols-outlined">radio_button_unchecked</i></div>
+                    <div class="sets-demo__row"><span>02</span><strong>60 kg</strong><em>4 reps</em><i class="material-symbols-outlined is-valid">check_circle</i></div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section landing-contrast" aria-labelledby="contrast-title">
+    <div class="landing-container landing-contrast__grid">
+        <div class="landing-contrast__copy">
+            <p class="landing-kicker"><span></span> Notas, só que melhores</p>
+            <h2 id="contrast-title">Mantenha a velocidade.<br>Elimine a bagunça.</h2>
+            <p>O bloco de notas é rápido hoje e confuso amanhã. O GymNote adiciona estrutura sem atrapalhar sua série.</p>
+        </div>
+        <div class="comparison" aria-label="Comparação entre uma anotação comum e o GymNote">
+            <div class="comparison__note">
+                <div class="comparison__bar"><span></span><span></span><span></span><small>notas.txt</small></div>
+                <p>sexta perna<br>agachamento 20 40 60x4<br>extensora 60x5 80x5 110x7<br>stiff barra 20 40x5<br>qual era a série válida?</p>
+                <i class="material-symbols-outlined">close</i>
+            </div>
+            <div class="comparison__structured">
+                <div class="comparison__head"><span>QUADRÍCEPS</span><strong>Agachamento livre</strong></div>
+                <div><span>01</span><strong>20 kg</strong><small>Aquecimento</small></div>
+                <div><span>02</span><strong>40 kg</strong><small>Aquecimento</small></div>
+                <div class="is-working"><span>03</span><strong>60 kg · 4 reps</strong><small><i class="material-symbols-outlined">check</i> Série válida</small></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section landing-steps" id="como-funciona" aria-labelledby="steps-title">
+    <div class="landing-container">
+        <div class="landing-section__heading landing-section__heading--center">
+            <p class="landing-kicker"><span></span> Fluxo direto</p>
+            <h2 id="steps-title">Do calendário à última repetição.</h2>
+        </div>
+        <ol class="steps-grid">
+            <li><span>01</span><i class="material-symbols-outlined" aria-hidden="true">calendar_month</i><h3>Escolha o dia</h3><p>Abra hoje ou registre um treino anterior pelo calendário.</p></li>
+            <li><span>02</span><i class="material-symbols-outlined" aria-hidden="true">exercise</i><h3>Monte o treino</h3><p>Selecione grupos musculares e exercícios do catálogo.</p></li>
+            <li><span>03</span><i class="material-symbols-outlined" aria-hidden="true">bolt</i><h3>Registre as séries</h3><p>Informe peso, repetições, parciais e marque as séries válidas.</p></li>
+        </ol>
+    </div>
+</section>
+
+<section class="landing-cta">
+    <div class="landing-cta__glow" aria-hidden="true"></div>
+    <div class="landing-container landing-cta__content">
+        <p class="landing-kicker"><span></span> Seu próximo treino</p>
+        <h2>Merece mais do que<br>uma nota perdida.</h2>
+        <p>Crie sua conta e deixe o GymNote organizar o que importa.</p>
+        {% if user.is_authenticated %}
+            <a class="landing-button landing-button--large" href="{% url 'core:calendar' %}">Abrir calendário <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
+        {% else %}
+            <a class="landing-button landing-button--large" href="{% url 'accounts:register' %}">Começar agora <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
+        {% endif %}
+    </div>
+</section>
+
+<footer class="landing-footer">
+    <div class="landing-container landing-footer__inner">
+        <div><a class="landing-brand" href="#topo">{% include "includes/logo_mark.html" %}<span>GymNote</span></a><p>Registro preciso. Treino sem distrações.</p></div>
+        <nav aria-label="Links do rodapé">
+            <a href="#produto">Produto</a>
+            <a href="#como-funciona">Como funciona</a>
+            {% if user.is_authenticated %}<a href="{% url 'core:calendar' %}">Calendário</a>{% else %}<a href="{% url 'accounts:login' %}">Entrar</a><a href="{% url 'accounts:register' %}">Criar conta</a>{% endif %}
+        </nav>
+        <small>© 2026 GymNote</small>
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script src="{% static 'core/js/landing.js' %}" defer></script>
+{% endblock %}
