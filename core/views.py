@@ -268,6 +268,13 @@ def muscle_group_detail(request, date_str, pk):
     added_exercises = workout_group.workout_exercises.select_related("exercise").annotate(
         working_sets=Count("sets", filter=Q(sets__is_working_set=True))
     )
+    set_counts = workout_group.workout_exercises.aggregate(
+        total_set_count=Count("sets"),
+        working_set_count=Count(
+            "sets",
+            filter=Q(sets__is_working_set=True),
+        ),
+    )
     available_exercises = Exercise.objects.filter(
         is_active=True,
         muscle_groups=workout_group.muscle_group,
@@ -284,6 +291,7 @@ def muscle_group_detail(request, date_str, pk):
             "added_exercises": added_exercises,
             "exercise_form": exercise_form,
             "query": query,
+            **set_counts,
         },
     )
 

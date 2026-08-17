@@ -14,6 +14,10 @@
         <p class="eyebrow">{{ workout_group.workout.date|date:"d \d\e F" }}</p>
         <h1>{{ workout_group.muscle_group.name }}</h1>
         <p>Selecione um exercício para registrar as séries.</p>
+        <div class="metrics-row">
+            <div class="metric-tile"><span>Séries</span><strong>{{ total_set_count }}</strong></div>
+            <div class="metric-tile metric-tile--accent"><span>Válidas</span><strong>{{ working_set_count }}</strong></div>
+        </div>
     </section>
 
     <section class="content-section">
