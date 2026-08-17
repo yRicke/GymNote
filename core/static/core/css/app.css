@@ -523,6 +523,79 @@ a.list-card:focus-visible,
 .message .material-symbols-outlined { color: var(--accent); }
 .message--error .material-symbols-outlined { color: var(--danger); }
 
+.error-page {
+    background:
+        radial-gradient(circle at 50% 20%, rgba(200, 243, 35, .1), transparent 24rem),
+        var(--surface-lowest);
+}
+
+.error-main {
+    display: grid;
+    min-height: 100vh;
+    padding: 32px 20px;
+    place-items: center;
+}
+
+.error-shell {
+    display: grid;
+    width: min(100%, 460px);
+    gap: 18px;
+}
+
+.error-brand {
+    display: inline-flex;
+    width: fit-content;
+    margin-inline: auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-card {
+    padding: 28px 24px;
+    border: 1px solid rgba(255, 255, 255, .05);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: 0 22px 55px rgba(0, 0, 0, .24);
+    text-align: center;
+}
+
+.error-card__status {
+    position: relative;
+    display: grid;
+    width: 94px;
+    height: 94px;
+    margin: 0 auto 24px;
+    place-items: center;
+    border: 1px solid var(--outline);
+    border-radius: 999px;
+    background: var(--surface-lowest);
+    color: var(--accent);
+}
+
+.error-card__status > span:first-child {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.error-card__status .material-symbols-outlined {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 19px;
+}
+
+.error-card > p:not(.eyebrow) { margin: 0 0 24px; color: var(--text-muted); }
+.error-card .button { margin-top: 6px; }
+.error-shell__hint { color: var(--text-muted); font-size: .72rem; text-align: center; }
+
 .auth-page { background: radial-gradient(circle at 50% 5%, rgba(200,243,35,.09), transparent 24rem), var(--surface-lowest); }
 .auth-main { min-height: 100vh; }
 .auth-shell { width: min(100%, 460px); margin: 0 auto; padding: max(48px, env(safe-area-inset-top)) 20px 48px; }

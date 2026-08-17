@@ -1,6 +1,6 @@
 from django.conf import settings
-from django.shortcuts import render
 
+from .error_views import too_many_requests
 from .rate_limit import client_identity, consume_rate_limit
 
 
@@ -27,12 +27,7 @@ class RateLimitMiddleware:
         )
 
         if not allowed:
-            response = render(
-                request,
-                "429.html",
-                {"retry_after": retry_after},
-                status=429,
-            )
+            response = too_many_requests(request, retry_after)
             response["Retry-After"] = str(retry_after)
         else:
             response = self.get_response(request)

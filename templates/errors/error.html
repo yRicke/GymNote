@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Erro {{ error_code }} | GymNote{% endblock %}
+{% block body_class %}error-page{% endblock %}
+{% block header %}{% endblock %}
+{% block main_class %}error-main{% endblock %}
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<div class="error-shell">
+    <a class="error-brand" href="{% url 'core:landing' %}" aria-label="GymNote - Início">
+        {% include "includes/logo_mark.html" %}
+        <strong>GymNote</strong>
+    </a>
+
+    <section class="error-card">
+        <div class="error-card__status" aria-hidden="true">
+            <span>{{ error_code }}</span>
+            <span class="material-symbols-outlined">{{ icon }}</span>
+        </div>
+        <p class="eyebrow eyebrow--accent">{{ eyebrow }}</p>
+        <h1>{{ heading }}</h1>
+        <p>{{ description }}</p>
+        <a class="button button--primary button--full" href="{% url 'core:landing' %}">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Voltar ao início
+        </a>
+    </section>
+
+    <small class="error-shell__hint">Se o problema continuar, aguarde um momento e tente novamente.</small>
+</div>
+{% endblock %}

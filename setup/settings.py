@@ -144,6 +144,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'core:calendar'
 LOGOUT_REDIRECT_URL = 'accounts:login'
+CSRF_FAILURE_VIEW = 'core.error_views.csrf_failure'
 
 GYMNOTE_RATE_LIMITS = {
     'auth': {'limit': 10, 'window_seconds': 300},

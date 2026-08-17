@@ -3,10 +3,11 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.test import override_settings
 from django.urls import reverse
 
+from . import error_views
 from .management.commands.seed_gym_data import CATALOG
 from .models import (
     Exercise,
@@ -49,6 +50,48 @@ class LandingPageTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response.url)
+
+
+@override_settings(DEBUG=False)
+class ErrorPageTests(TestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/")
+
+    def test_not_found_handler_uses_custom_page(self):
+        response = self.client.get("/pagina-que-nao-existe/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "404", status_code=404)
+        self.assertContains(response, "Esse caminho não existe", status_code=404)
+        self.assertContains(response, "Voltar ao início", status_code=404)
+        self.assertNotContains(response, 'class="bottom-nav"', status_code=404)
+
+    def test_standard_error_handlers_share_the_same_layout(self):
+        cases = (
+            (error_views.bad_request, 400, "Não conseguimos processar isso"),
+            (error_views.permission_denied, 403, "Esta área não está disponível"),
+            (error_views.server_error, 500, "Algo saiu do lugar"),
+        )
+
+        for handler, status_code, heading in cases:
+            with self.subTest(status_code=status_code):
+                response = handler(self.request)
+                content = response.content.decode()
+
+                self.assertEqual(response.status_code, status_code)
+                self.assertIn(heading, content)
+                self.assertIn("Voltar ao início", content)
+                self.assertIn("GymNote", content)
+
+    def test_csrf_failure_uses_forbidden_page(self):
+        response = error_views.csrf_failure(self.request, reason="CSRF inválido")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(
+            response,
+            "Acesso não permitido",
+            status_code=403,
+        )
 
 
 class WorkoutFlowTests(TestCase):
@@ -1000,6 +1043,8 @@ class RateLimitTests(TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertIn("Retry-After", response)
         self.assertEqual(response["X-RateLimit-Remaining"], "0")
+        self.assertContains(response, "Respire um pouco", status_code=429)
+        self.assertContains(response, "Voltar ao início", status_code=429)
 
     def test_authenticated_writes_are_limited_by_user(self):
         user = User.objects.create_user("rate_user", password="senha-teste-123")
