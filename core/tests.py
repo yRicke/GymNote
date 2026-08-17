@@ -136,15 +136,47 @@ class WorkoutFlowTests(TestCase):
             {"add-muscle_groups": [self.quadriceps.pk]},
         )
 
-        self.assertRedirects(
-            response,
-            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"}),
-        )
         workout_group = WorkoutMuscleGroup.objects.get(
             workout__user=self.user_a,
             workout__date=self.workout_date,
         )
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+        )
         self.assertEqual(workout_group.order, 1)
+
+    def test_adding_exercise_redirects_to_its_logging_page(self):
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        workout_group = WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:add_exercises",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+            {"exercises": [self.exercise.pk]},
+        )
+
+        workout_exercise = WorkoutExercise.objects.get(
+            workout_muscle_group=workout_group,
+            exercise=self.exercise,
+        )
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:workout_exercise",
+                kwargs={"date_str": "2026-08-14", "pk": workout_exercise.pk},
+            ),
+        )
 
     def test_invalid_group_submission_does_not_create_workout(self):
         self.client.force_login(self.user_a)

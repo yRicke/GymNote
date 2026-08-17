@@ -166,6 +166,7 @@ def add_muscle_groups(request, date_str):
         prefix="add",
     )
     if form.is_valid():
+        first_workout_group = None
         with transaction.atomic():
             workout, _ = Workout.objects.get_or_create(
                 user=request.user,
@@ -173,15 +174,22 @@ def add_muscle_groups(request, date_str):
             )
             next_order = _next_order(workout.workout_muscle_groups.all())
             for muscle_group in form.cleaned_data["muscle_groups"]:
-                WorkoutMuscleGroup.objects.create(
+                workout_group = WorkoutMuscleGroup.objects.create(
                     workout=workout,
                     muscle_group=muscle_group,
                     order=next_order,
                 )
+                if first_workout_group is None:
+                    first_workout_group = workout_group
                 next_order += 1
         messages.success(request, "Grupo(s) muscular(es) adicionado(s).")
-    else:
-        messages.error(request, "Selecione ao menos um grupo muscular válido.")
+        return redirect(
+            "core:muscle_group",
+            date_str=date_str,
+            pk=first_workout_group.pk,
+        )
+
+    messages.error(request, "Selecione ao menos um grupo muscular válido.")
     return redirect("core:workout_day", date_str=date_str)
 
 
@@ -245,18 +253,26 @@ def add_exercises(request, date_str, pk):
     ).exclude(id__in=existing_ids)
     form = ExerciseSelectionForm(request.POST, queryset=available_exercises)
     if form.is_valid():
+        first_workout_exercise = None
         with transaction.atomic():
             next_order = _next_order(workout_group.workout_exercises.all())
             for exercise in form.cleaned_data["exercises"]:
-                WorkoutExercise.objects.create(
+                workout_exercise = WorkoutExercise.objects.create(
                     workout_muscle_group=workout_group,
                     exercise=exercise,
                     order=next_order,
                 )
+                if first_workout_exercise is None:
+                    first_workout_exercise = workout_exercise
                 next_order += 1
         messages.success(request, "Exercício(s) adicionado(s).")
-    else:
-        messages.error(request, "Selecione ao menos um exercício válido.")
+        return redirect(
+            "core:workout_exercise",
+            date_str=date_str,
+            pk=first_workout_exercise.pk,
+        )
+
+    messages.error(request, "Selecione ao menos um exercício válido.")
     return redirect("core:muscle_group", date_str=date_str, pk=pk)
 
 
