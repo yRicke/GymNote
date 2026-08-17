@@ -11,7 +11,12 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .forms import ExerciseSelectionForm, ExerciseSetForm, MuscleGroupSelectionForm
+from .forms import (
+    ExerciseSelectionForm,
+    ExerciseSetForm,
+    MuscleGroupSelectionForm,
+    WorkoutFilterForm,
+)
 from .models import (
     Exercise,
     ExerciseSet,
@@ -120,14 +125,20 @@ def calendar_view(request):
 
 @login_required
 def workout_list(request):
-    query = request.GET.get("q", "").strip()
+    filter_form = WorkoutFilterForm(
+        request.GET,
+        queryset=MuscleGroup.objects.filter(is_active=True),
+    )
+    selected_groups = []
     workouts = Workout.objects.filter(
         user=request.user,
         workout_muscle_groups__isnull=False,
     )
-    if query:
+    if filter_form.is_valid():
+        selected_groups = list(filter_form.cleaned_data["muscle_groups"])
+    if selected_groups:
         workouts = workouts.filter(
-            workout_muscle_groups__muscle_group__name__icontains=query,
+            workout_muscle_groups__muscle_group__in=selected_groups,
         )
     workouts = (
         workouts.prefetch_related("workout_muscle_groups__muscle_group")
@@ -137,7 +148,11 @@ def workout_list(request):
     return render(
         request,
         "core/workout_list.html",
-        {"workouts": workouts, "query": query},
+        {
+            "workouts": workouts,
+            "filter_form": filter_form,
+            "selected_groups": selected_groups,
+        },
     )
 
 

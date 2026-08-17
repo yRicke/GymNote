@@ -16,16 +16,24 @@
         <p>Acesse qualquer dia para consultar ou continuar seus registros.</p>
     </section>
 
-    <form class="search-form" method="get" role="search">
-        <label class="sr-only" for="id_q">Buscar treinos por grupo muscular</label>
-        <span class="material-symbols-outlined" aria-hidden="true">search</span>
-        <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Buscar por grupo muscular...">
-        {% if query %}<a href="{% url 'core:workouts' %}" aria-label="Limpar busca"><span class="material-symbols-outlined" aria-hidden="true">close</span></a>{% endif %}
-    </form>
+    <section class="panel workout-filter">
+        <div class="section-heading">
+            <div><p class="eyebrow eyebrow--accent">Filtros</p><h2>Grupos musculares</h2></div>
+            {% if selected_groups %}<span class="pill">{{ selected_groups|length }} selecionado{{ selected_groups|length|pluralize:"s" }}</span>{% endif %}
+        </div>
+        <form class="selection-form" method="get">
+            <div class="choice-list choice-list--filters">{{ filter_form.muscle_groups }}</div>
+            {% for error in filter_form.muscle_groups.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            <div class="button-stack">
+                <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtrar treinos</button>
+                {% if selected_groups %}<a class="button button--ghost button--full" href="{% url 'core:workouts' %}">Limpar filtros</a>{% endif %}
+            </div>
+        </form>
+    </section>
 
     <section class="content-section">
         <div class="section-heading">
-            <h2>{% if query %}Resultados{% else %}Todos os treinos{% endif %}</h2>
+            <h2>{% if selected_groups %}Resultados{% else %}Todos os treinos{% endif %}</h2>
             {% if workouts %}<span class="pill">{{ workouts|length }} treino{{ workouts|length|pluralize:"s" }}</span>{% endif %}
         </div>
         {% if workouts %}
@@ -44,17 +52,17 @@
         {% else %}
             <div class="button-stack">
                 <div class="empty-state">
-                    <span class="material-symbols-outlined" aria-hidden="true">{% if query %}search_off{% else %}event_note{% endif %}</span>
-                    {% if query %}
+                    <span class="material-symbols-outlined" aria-hidden="true">{% if selected_groups %}filter_alt_off{% else %}event_note{% endif %}</span>
+                    {% if selected_groups %}
                         <h3>Nenhum treino encontrado</h3>
-                        <p>Não há treinos com o grupo muscular “{{ query }}”.</p>
+                        <p>Não há treinos com os grupos musculares selecionados.</p>
                     {% else %}
                         <h3>Nenhum treino registrado</h3>
                         <p>Escolha um dia no calendário e adicione seu primeiro grupo muscular.</p>
                     {% endif %}
                 </div>
-                {% if query %}
-                    <a class="button button--ghost button--full" href="{% url 'core:workouts' %}">Limpar busca</a>
+                {% if selected_groups %}
+                    <a class="button button--ghost button--full" href="{% url 'core:workouts' %}">Limpar filtros</a>
                 {% else %}
                     <a class="button button--primary button--full" href="{% url 'core:calendar' %}">Abrir calendário <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
                 {% endif %}
