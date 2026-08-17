@@ -35,7 +35,7 @@
                             <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
                             <span class="list-card__body">
                                 <strong>{{ workout_group.muscle_group.name }}</strong>
-                                <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }}</small>
+                                <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.working_set_count }} série{{ workout_group.working_set_count|pluralize:"s" }} válida{{ workout_group.working_set_count|pluralize:"s" }}</small>
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>

@@ -166,7 +166,14 @@ def workout_day(request, date_str):
     )
     workout_groups = (
         workout.workout_muscle_groups.select_related("muscle_group")
-        .annotate(exercise_count=Count("workout_exercises"))
+        .annotate(
+            exercise_count=Count("workout_exercises", distinct=True),
+            working_set_count=Count(
+                "workout_exercises__sets",
+                filter=Q(workout_exercises__sets__is_working_set=True),
+                distinct=True,
+            ),
+        )
         if workout
         else WorkoutMuscleGroup.objects.none()
     )

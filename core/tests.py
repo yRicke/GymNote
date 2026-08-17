@@ -261,6 +261,46 @@ class WorkoutFlowTests(TestCase):
         self.assertNotContains(response, "Iniciar treino")
         self.assertNotContains(response, "Finalizar treino")
 
+    def test_workout_page_counts_exercises_and_working_sets_per_group(self):
+        _, workout_group, first_entry = self.create_exercise_entry()
+        second_exercise = Exercise.objects.create(name="Leg Press")
+        second_exercise.muscle_groups.add(self.quadriceps)
+        second_entry = WorkoutExercise.objects.create(
+            workout_muscle_group=workout_group,
+            exercise=second_exercise,
+            order=2,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=first_entry,
+            order=1,
+            is_working_set=False,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=first_entry,
+            order=2,
+            is_working_set=True,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=second_entry,
+            order=1,
+            is_working_set=True,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=second_entry,
+            order=2,
+            is_working_set=True,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+
+        annotated_group = response.context["workout_groups"].get(pk=workout_group.pk)
+        self.assertEqual(annotated_group.exercise_count, 2)
+        self.assertEqual(annotated_group.working_set_count, 3)
+        self.assertContains(response, "2 exercícios e 3 séries válidas")
+
     def test_user_cannot_access_another_users_workout_group(self):
         _, workout_group, _ = self.create_exercise_entry(user=self.user_b)
         self.client.force_login(self.user_a)
