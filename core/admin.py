@@ -33,6 +33,10 @@ class WorkoutAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__email")
     date_hierarchy = "date"
 
+    def has_add_permission(self, request):
+        # O treino nasce junto com seu primeiro grupo pelo fluxo da aplicação.
+        return False
+
 
 @admin.register(WorkoutMuscleGroup)
 class WorkoutMuscleGroupAdmin(admin.ModelAdmin):
