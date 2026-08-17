@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Muitas tentativas | GymNote{% endblock %}
+{% block content %}
+<div class="page-shell page-shell--narrow confirm-page">
+    <section class="confirmation-card">
+        <span class="confirmation-card__icon material-symbols-outlined" aria-hidden="true">timer</span>
+        <p class="eyebrow eyebrow--accent">Limite de requisições</p>
+        <h1>Respire um pouco</h1>
+        <p>Muitas ações foram enviadas em sequência. Tente novamente em aproximadamente {{ retry_after }} segundo{{ retry_after|pluralize:"s" }}.</p>
+        <a class="button button--primary button--full" href="{% url 'core:calendar' %}">Voltar ao calendário</a>
+    </section>
+</div>
+{% endblock %}

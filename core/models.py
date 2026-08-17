@@ -146,3 +146,16 @@ class ExerciseSet(models.Model):
 
     def __str__(self):
         return f"{self.workout_exercise} - Série {self.order}"
+
+
+class RateLimitCounter(models.Model):
+    key = models.CharField(max_length=64, primary_key=True)
+    count = models.PositiveIntegerField(default=1)
+    expires_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["expires_at"]
+
+    def __str__(self):
+        return f"{self.key[:12]}… ({self.count})"

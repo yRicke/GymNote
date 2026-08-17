@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.test import override_settings
 from django.urls import reverse
 
 from .models import (
@@ -254,3 +255,47 @@ class SeedGymDataTests(TestCase):
             Exercise.objects.get(name="Agachamento Livre").muscle_groups.count(),
             2,
         )
+
+
+@override_settings(
+    GYMNOTE_RATE_LIMITS={
+        "auth": {"limit": 2, "window_seconds": 300},
+        "write": {"limit": 2, "window_seconds": 60},
+    }
+)
+class RateLimitTests(TestCase):
+    def test_authentication_attempts_are_limited_by_ip(self):
+        login_url = reverse("accounts:login")
+        payload = {"username": "inexistente", "password": "incorreta"}
+
+        self.assertEqual(self.client.post(login_url, payload).status_code, 200)
+        self.assertEqual(self.client.post(login_url, payload).status_code, 200)
+        response = self.client.post(login_url, payload)
+
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("Retry-After", response)
+        self.assertEqual(response["X-RateLimit-Remaining"], "0")
+
+    def test_authenticated_writes_are_limited_by_user(self):
+        user = User.objects.create_user("rate_user", password="senha-teste-123")
+        self.client.force_login(user)
+        add_group_url = reverse(
+            "core:add_muscle_groups",
+            kwargs={"date_str": "2026-08-14"},
+        )
+
+        self.assertEqual(self.client.post(add_group_url, {}).status_code, 302)
+        self.assertEqual(self.client.post(add_group_url, {}).status_code, 302)
+        response = self.client.post(add_group_url, {})
+
+        self.assertEqual(response.status_code, 429)
+
+    def test_get_requests_are_not_rate_limited(self):
+        user = User.objects.create_user("reader", password="senha-teste-123")
+        self.client.force_login(user)
+        calendar_url = reverse("core:calendar")
+
+        for _ in range(5):
+            response = self.client.get(calendar_url)
+
+        self.assertEqual(response.status_code, 200)

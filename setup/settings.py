@@ -51,6 +51,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.RateLimitMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -125,6 +126,11 @@ STATIC_URL = 'static/'
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'core:calendar'
 LOGOUT_REDIRECT_URL = 'accounts:login'
+
+GYMNOTE_RATE_LIMITS = {
+    'auth': {'limit': 10, 'window_seconds': 300},
+    'write': {'limit': 60, 'window_seconds': 60},
+}
 
 
 # Email
