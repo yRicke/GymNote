@@ -63,6 +63,24 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Workout.objects.exists())
 
+    def test_calendar_indicator_requires_a_muscle_group(self):
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        self.client.force_login(self.user_a)
+
+        calendar_url = reverse("core:calendar")
+        response = self.client.get(calendar_url, {"year": 2026, "month": 8})
+
+        self.assertNotContains(response, "calendar-day__dot")
+
+        WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        response = self.client.get(calendar_url, {"year": 2026, "month": 8})
+
+        self.assertContains(response, "calendar-day__dot", count=1)
+
     def test_workout_page_has_no_lifecycle_controls(self):
         Workout.objects.create(user=self.user_a, date=self.workout_date)
         self.client.force_login(self.user_a)

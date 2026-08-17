@@ -74,6 +74,8 @@ def calendar_view(request):
             user=request.user,
             date__year=year,
             date__month=month,
+        ).annotate(
+            muscle_group_count=Count("workout_muscle_groups", distinct=True)
         ).prefetch_related(
             "workout_muscle_groups__muscle_group",
             "workout_muscle_groups__workout_exercises",
@@ -87,6 +89,9 @@ def calendar_view(request):
                     "date": day,
                     "in_month": day.month == month,
                     "workout": workouts.get(day),
+                    "has_workout_groups": bool(
+                        workouts.get(day) and workouts[day].muscle_group_count
+                    ),
                     "is_today": day == today,
                 }
                 for day in week
