@@ -120,19 +120,24 @@ def calendar_view(request):
 
 @login_required
 def workout_list(request):
-    workouts = (
-        Workout.objects.filter(
-            user=request.user,
-            workout_muscle_groups__isnull=False,
+    query = request.GET.get("q", "").strip()
+    workouts = Workout.objects.filter(
+        user=request.user,
+        workout_muscle_groups__isnull=False,
+    )
+    if query:
+        workouts = workouts.filter(
+            workout_muscle_groups__muscle_group__name__icontains=query,
         )
-        .prefetch_related("workout_muscle_groups__muscle_group")
+    workouts = (
+        workouts.prefetch_related("workout_muscle_groups__muscle_group")
         .distinct()
         .order_by("-date")
     )
     return render(
         request,
         "core/workout_list.html",
-        {"workouts": workouts},
+        {"workouts": workouts, "query": query},
     )
 
 
