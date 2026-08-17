@@ -405,6 +405,10 @@ a.list-card:focus-visible,
 }
 
 .choice-list input[type="checkbox"]:checked { border: 5px solid var(--accent); background: var(--on-accent); }
+.choice-list--filters > div,
+.choice-list--filters ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.choice-list--filters label { height: 100%; font-size: .85rem; }
+.choice-list--filters input[type="checkbox"] { border-radius: 6px; }
 
 .search-form {
     display: flex;
@@ -541,6 +545,8 @@ a.list-card:focus-visible,
     .page-shell { padding-right: 14px; padding-left: 14px; }
     .app-header__inner { padding-right: 14px; padding-left: 14px; }
     .calendar-day { width: 40px; height: 40px; }
+    .choice-list--filters > div,
+    .choice-list--filters ul { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -16,6 +16,20 @@ class MuscleGroupSelectionForm(forms.Form):
             self.fields["muscle_groups"].queryset = queryset
 
 
+class WorkoutFilterForm(forms.Form):
+    muscle_groups = forms.ModelMultipleChoiceField(
+        queryset=MuscleGroup.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="Grupos musculares",
+        required=False,
+    )
+
+    def __init__(self, *args, queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if queryset is not None:
+            self.fields["muscle_groups"].queryset = queryset
+
+
 class ExerciseSelectionForm(forms.Form):
     exercises = forms.ModelMultipleChoiceField(
         queryset=Exercise.objects.none(),

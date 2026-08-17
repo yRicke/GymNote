@@ -155,11 +155,16 @@ class WorkoutFlowTests(TestCase):
             ),
         )
 
-    def test_workout_list_filters_by_muscle_group_name(self):
+    def test_workout_list_filters_by_multiple_muscle_groups(self):
         posterior = MuscleGroup.objects.create(
             name="Posterior de Coxa",
             slug="posterior-de-coxa",
             order=2,
+        )
+        chest = MuscleGroup.objects.create(
+            name="Peito",
+            slug="peito",
+            order=3,
         )
         quadriceps_workout = Workout.objects.create(
             user=self.user_a,
@@ -181,10 +186,13 @@ class WorkoutFlowTests(TestCase):
         )
         self.client.force_login(self.user_a)
 
-        response = self.client.get(reverse("core:workouts"), {"q": "  quad  "})
+        response = self.client.get(
+            reverse("core:workouts"),
+            {"muscle_groups": [self.quadriceps.pk]},
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["query"], "quad")
+        self.assertEqual(response.context["selected_groups"], [self.quadriceps])
         self.assertEqual(list(response.context["workouts"]), [quadriceps_workout])
         self.assertContains(response, "Quadríceps")
         self.assertNotContains(
@@ -195,7 +203,20 @@ class WorkoutFlowTests(TestCase):
             ),
         )
 
-        no_results = self.client.get(reverse("core:workouts"), {"q": "Peito"})
+        multiple_results = self.client.get(
+            reverse("core:workouts"),
+            {"muscle_groups": [self.quadriceps.pk, posterior.pk]},
+        )
+
+        self.assertEqual(
+            list(multiple_results.context["workouts"]),
+            [posterior_workout, quadriceps_workout],
+        )
+
+        no_results = self.client.get(
+            reverse("core:workouts"),
+            {"muscle_groups": [chest.pk]},
+        )
 
         self.assertContains(no_results, "Nenhum treino encontrado")
         self.assertQuerySetEqual(no_results.context["workouts"], [])
