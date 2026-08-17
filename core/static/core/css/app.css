@@ -441,14 +441,16 @@ a.list-card:focus-visible,
 .metric-tile--large { min-height: 124px; border-radius: var(--radius-xl); }
 .metric-tile--large strong { font-size: 2.4rem; }
 
-.sets-table-wrap { overflow-x: auto; border-radius: var(--radius-md); background: var(--surface-low); }
+.sets-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; border-radius: var(--radius-md); background: var(--surface-low); }
 .sets-table { width: 100%; min-width: 590px; border-collapse: collapse; }
 .sets-table th { height: 42px; padding: 0 10px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: .62rem; font-weight: 500; letter-spacing: .07em; text-align: center; text-transform: uppercase; }
+.sets-table th:last-child { position: relative; }
+.sets-table .sr-only { top: 0; left: 0; }
 .sets-table td { height: 62px; padding: 8px 10px; border-top: 1px solid var(--surface-high); text-align: center; }
 .sets-table tr.is-working { background: rgba(200, 243, 35, .09); box-shadow: inset 3px 0 0 var(--accent); }
 .sets-table tr.is-working strong { color: var(--accent); }
 .set-number { color: var(--text-muted); font-family: "JetBrains Mono", monospace; }
-.working-mark { display: inline-grid; width: 28px; height: 28px; place-items: center; border-radius: 7px; background: var(--surface-highest); color: var(--text-muted); }
+.working-mark { position: relative; display: inline-grid; width: 28px; height: 28px; place-items: center; border-radius: 7px; background: var(--surface-highest); color: var(--text-muted); }
 .working-mark .material-symbols-outlined { font-size: 18px; }
 .working-mark.is-active { background: var(--accent); color: var(--on-accent); }
 .set-actions { white-space: nowrap; }
@@ -538,83 +540,6 @@ a.list-card:focus-visible,
     .page-shell { padding-top: 40px; }
     .calendar-day { width: 48px; height: 48px; }
     .today-card { padding: 26px; }
-}
-
-@media (max-width: 629px) {
-    .workout-log,
-    .workout-log .content-section,
-    .workout-log .sets-table-wrap,
-    .workout-log .set-entry { min-width: 0; max-width: 100%; }
-
-    .workout-log .sets-table-wrap {
-        overflow: visible;
-        background: transparent;
-    }
-
-    .workout-log .sets-table {
-        display: block;
-        min-width: 0;
-    }
-
-    .workout-log .sets-table thead {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-    }
-
-    .workout-log .sets-table tbody {
-        display: grid;
-        gap: 10px;
-    }
-
-    .workout-log .sets-table tr {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        padding: 10px;
-        border: 1px solid rgba(255, 255, 255, .035);
-        border-radius: var(--radius-md);
-        background: var(--surface-low);
-    }
-
-    .workout-log .sets-table td {
-        display: grid;
-        min-width: 0;
-        height: auto;
-        padding: 7px 8px;
-        align-content: start;
-        gap: 4px;
-        border: 0;
-        text-align: left;
-    }
-
-    .workout-log .sets-table td::before {
-        color: var(--text-muted);
-        content: attr(data-label);
-        font-family: "JetBrains Mono", monospace;
-        font-size: .57rem;
-        font-weight: 500;
-        letter-spacing: .06em;
-        line-height: 1.2;
-        text-transform: uppercase;
-    }
-
-    .workout-log .sets-table tr.is-working {
-        background: rgba(200, 243, 35, .09);
-    }
-
-    .workout-log .sets-table .set-actions {
-        display: flex;
-        align-items: end;
-        justify-content: flex-end;
-        gap: 2px;
-        white-space: normal;
-    }
-
-    .workout-log .sets-table .set-actions::before { content: none; }
 }
 
 @media (max-width: 520px) {
