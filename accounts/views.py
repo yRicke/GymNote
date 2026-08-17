@@ -24,5 +24,11 @@ def profile(request):
     return render(
         request,
         "accounts/profile.html",
-        {"workout_count": request.user.workouts.count()},
+        {
+            "workout_count": request.user.workouts.filter(
+                workout_muscle_groups__isnull=False
+            )
+            .distinct()
+            .count()
+        },
     )

@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 
 class MuscleGroup(models.Model):
@@ -159,3 +161,18 @@ class RateLimitCounter(models.Model):
 
     def __str__(self):
         return f"{self.key[:12]}… ({self.count})"
+
+
+@receiver(post_delete, sender=WorkoutMuscleGroup)
+def delete_empty_workout_after_group_removal(
+    sender, instance, origin=None, **kwargs
+):
+    """Remove o treino quando seus grupos forem removidos diretamente."""
+    origin_model = getattr(origin, "model", origin.__class__ if origin else None)
+    if origin_model is not WorkoutMuscleGroup:
+        return
+
+    Workout.objects.filter(
+        pk=instance.workout_id,
+        workout_muscle_groups__isnull=True,
+    ).delete()

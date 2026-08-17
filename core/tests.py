@@ -150,6 +150,61 @@ class WorkoutFlowTests(TestCase):
         )
         self.assertEqual(workout_group.order, 1)
 
+    def test_removing_last_group_deletes_empty_workout(self):
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        workout_group = WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:remove_muscle_groups",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+            {"remove-muscle_groups": [self.quadriceps.pk]},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+        )
+        self.assertFalse(WorkoutMuscleGroup.objects.filter(pk=workout_group.pk).exists())
+        self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
+
+    def test_removing_one_group_keeps_workout_with_remaining_group(self):
+        posterior = MuscleGroup.objects.create(
+            name="Posterior de Coxa", slug="posterior-de-coxa", order=2
+        )
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=posterior,
+            order=2,
+        )
+        self.client.force_login(self.user_a)
+
+        self.client.post(
+            reverse(
+                "core:remove_muscle_groups",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+            {"remove-muscle_groups": [self.quadriceps.pk]},
+        )
+
+        self.assertTrue(Workout.objects.filter(pk=workout.pk).exists())
+        self.assertEqual(workout.workout_muscle_groups.count(), 1)
+
     def test_adding_exercise_redirects_to_its_logging_page(self):
         workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
         workout_group = WorkoutMuscleGroup.objects.create(
@@ -178,6 +233,23 @@ class WorkoutFlowTests(TestCase):
                 kwargs={"date_str": "2026-08-14", "pk": workout_exercise.pk},
             ),
         )
+
+    def test_profile_ignores_workout_without_groups(self):
+        Workout.objects.create(user=self.user_a, date=self.workout_date)
+        valid_workout = Workout.objects.create(
+            user=self.user_a,
+            date=date(2026, 8, 15),
+        )
+        WorkoutMuscleGroup.objects.create(
+            workout=valid_workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("accounts:profile"))
+
+        self.assertEqual(response.context["workout_count"], 1)
 
     def test_invalid_group_submission_does_not_create_workout(self):
         self.client.force_login(self.user_a)
