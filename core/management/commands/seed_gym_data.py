@@ -203,6 +203,7 @@ class Command(BaseCommand):
         for exercise_name, related_groups in exercise_groups.items():
             exercise, _ = Exercise.objects.update_or_create(
                 name=exercise_name,
+                user=None,
                 defaults={"is_active": True},
             )
             exercise.muscle_groups.set(related_groups)

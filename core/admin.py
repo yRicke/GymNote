@@ -7,6 +7,8 @@ from .models import (
     Workout,
     WorkoutExercise,
     WorkoutMuscleGroup,
+    WorkoutPreset,
+    WorkoutPresetExercise,
 )
 
 
@@ -20,10 +22,23 @@ class MuscleGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active")
-    list_filter = ("is_active", "muscle_groups")
-    search_fields = ("name",)
+    list_display = ("name", "user", "is_active")
+    list_filter = ("is_active", "muscle_groups", "user")
+    search_fields = ("name", "user__username", "user__email")
     filter_horizontal = ("muscle_groups",)
+
+
+class WorkoutPresetExerciseInline(admin.TabularInline):
+    model = WorkoutPresetExercise
+    extra = 0
+
+
+@admin.register(WorkoutPreset)
+class WorkoutPresetAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "muscle_group", "updated_at")
+    list_filter = ("muscle_group",)
+    search_fields = ("name", "user__username", "user__email")
+    inlines = (WorkoutPresetExerciseInline,)
 
 
 @admin.register(Workout)
