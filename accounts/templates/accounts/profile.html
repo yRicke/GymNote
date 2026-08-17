@@ -1,14 +1,27 @@
 {% extends "base.html" %}
 
 {% block title %}Perfil | GymNote{% endblock %}
+{% block header_title %}Perfil{% endblock %}
 
 {% block content %}
-<h1>Perfil</h1>
-<p>Nome de usuário: {{ user.username }}</p>
-<p>E-mail: {{ user.email|default:"Não informado" }}</p>
-<p>Quantidade de treinos registrados: {{ workout_count }}</p>
-<form method="post" action="{% url 'accounts:logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-</form>
+<div class="page-shell page-shell--narrow profile-page">
+    <section class="profile-hero">
+        <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+        <p class="eyebrow eyebrow--accent">Atleta GymNote</p>
+        <h1>{{ user.username }}</h1>
+        <p>{{ user.email|default:"E-mail não informado" }}</p>
+    </section>
+    <section class="profile-metrics">
+        <div class="metric-tile metric-tile--large"><span>Treinos registrados</span><strong>{{ workout_count }}</strong></div>
+    </section>
+    <section class="panel account-panel">
+        <div class="section-heading"><h2>Conta</h2><span class="material-symbols-outlined" aria-hidden="true">manage_accounts</span></div>
+        <div class="account-row"><span>Nome de usuário</span><strong>{{ user.username }}</strong></div>
+        <div class="account-row"><span>E-mail</span><strong>{{ user.email|default:"Não informado" }}</strong></div>
+    </section>
+    <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button class="button button--ghost button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">logout</span> Sair da conta</button>
+    </form>
+</div>
 {% endblock %}

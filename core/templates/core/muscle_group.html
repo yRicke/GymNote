@@ -1,50 +1,65 @@
 {% extends "base.html" %}
 
 {% block title %}{{ workout_group.muscle_group.name }} | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:workout_day' date_str=workout_group.workout.date|date:'Y-m-d' %}" aria-label="Voltar ao treino"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>Exercícios</span></span>
+    </div>
+{% endblock %}
 
 {% block content %}
-<p>
-    <a href="{% url 'core:workout_day' date_str=workout_group.workout.date|date:'Y-m-d' %}">&larr; Voltar ao treino</a>
-</p>
+<div class="page-shell">
+    <section class="page-heading">
+        <p class="eyebrow">{{ workout_group.workout.date|date:"d \d\e F" }}</p>
+        <h1>{{ workout_group.muscle_group.name }}</h1>
+        <p>Selecione um exercício para registrar as séries.</p>
+    </section>
 
-<h1>{{ workout_group.muscle_group.name }}</h1>
-<p>Treino {{ workout_group.workout.date|date:"d/m/Y" }}</p>
+    <section class="content-section">
+        <div class="section-heading"><h2>Seu treino</h2><span class="pill">{{ added_exercises|length }} exercício{{ added_exercises|length|pluralize:"s" }}</span></div>
+        {% if added_exercises %}
+            <div class="stack-list">
+                {% for workout_exercise in added_exercises %}
+                    <article class="list-card list-card--actions">
+                        <a class="list-card__main" href="{% url 'core:workout_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">fitness_center</span>
+                            <span class="list-card__body"><strong>{{ workout_exercise.exercise.name }}</strong><small>{{ workout_exercise.working_sets }} série{{ workout_exercise.working_sets|pluralize:"s" }} válida{{ workout_exercise.working_sets|pluralize:"s" }}</small></span>
+                            <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
+                        </a>
+                        <form method="post" action="{% url 'core:remove_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
+                            {% csrf_token %}
+                            <button class="icon-button icon-button--danger" type="submit" aria-label="Remover {{ workout_exercise.exercise.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
+                        </form>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state empty-state--compact"><span class="material-symbols-outlined" aria-hidden="true">exercise</span><p>Nenhum exercício adicionado ainda.</p></div>
+        {% endif %}
+    </section>
 
-<h2>Exercícios adicionados</h2>
-{% if added_exercises %}
-    <ul>
-        {% for workout_exercise in added_exercises %}
-            <li>
-                <a href="{% url 'core:workout_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
-                    {{ workout_exercise.exercise.name }}
-                </a>
-                — {{ workout_exercise.working_sets }} série{{ workout_exercise.working_sets|pluralize }} válida{{ workout_exercise.working_sets|pluralize }}
-                <form method="post" action="{% url 'core:remove_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit">Remover</button>
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-{% else %}
-    <p>Nenhum exercício adicionado.</p>
-{% endif %}
-
-<h2>Pesquisar exercícios disponíveis</h2>
-<form method="get">
-    <label for="id_q">Nome:</label>
-    <input id="id_q" type="search" name="q" value="{{ query }}">
-    <button type="submit">Pesquisar</button>
-</form>
-
-<h2>Adicionar exercícios</h2>
-{% if exercise_form.fields.exercises.queryset %}
-    <form method="post" action="{% url 'core:add_exercises' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}">
-        {% csrf_token %}
-        {{ exercise_form.as_p }}
-        <button type="submit">Adicionar selecionados</button>
-    </form>
-{% else %}
-    <p>Nenhum exercício disponível para a busca atual.</p>
-{% endif %}
+    <section class="content-section panel">
+        <div class="section-heading">
+            <div><p class="eyebrow eyebrow--accent">Catálogo</p><h2>Adicionar exercícios</h2></div>
+            <span class="pill">{{ exercise_form.fields.exercises.queryset|length }} {% if exercise_form.fields.exercises.queryset|length == 1 %}disponível{% else %}disponíveis{% endif %}</span>
+        </div>
+        <form class="search-form" method="get" role="search">
+            <label class="sr-only" for="id_q">Pesquisar exercício</label>
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Buscar exercício...">
+            {% if query %}<a href="{% url 'core:muscle_group' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" aria-label="Limpar busca"><span class="material-symbols-outlined">close</span></a>{% endif %}
+        </form>
+        {% if exercise_form.fields.exercises.queryset %}
+            <form method="post" action="{% url 'core:add_exercises' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" class="selection-form">
+                {% csrf_token %}
+                <div class="choice-list choice-list--exercises">{{ exercise_form.exercises }}</div>
+                {% for error in exercise_form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
+            </form>
+        {% else %}
+            <p class="muted">Nenhum exercício disponível para a busca atual.</p>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}

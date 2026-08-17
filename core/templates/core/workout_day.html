@@ -1,50 +1,83 @@
 {% extends "base.html" %}
 
 {% block title %}Treino {{ workout_date|date:"d/m/Y" }} | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}" aria-label="Voltar ao calendário">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </a>
+        <a class="brand" href="{% url 'core:calendar' %}">{% include "includes/logo_mark.html" %}<span>Treinos</span></a>
+    </div>
+{% endblock %}
 
 {% block content %}
-<p><a href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}">&larr; Voltar ao calendário</a></p>
+<div class="page-shell">
+    <section class="page-heading page-heading--center">
+        <p class="eyebrow">Treino do dia</p>
+        <h1>{{ workout_date|date:"l, d \d\e F" }}</h1>
+        {% if workout_groups %}
+            <p>{% for workout_group in workout_groups %}{{ workout_group.muscle_group.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+        {% else %}
+            <p>Adicione os grupos musculares para começar.</p>
+        {% endif %}
+    </section>
 
-<h1>Treino - {{ workout_date|date:"d/m/Y" }}</h1>
+    <section class="content-section">
+        <div class="section-heading">
+            <h2>Grupos musculares</h2>
+            {% if workout_groups %}<span class="pill">{{ workout_groups|length }} grupo{{ workout_groups|length|pluralize:"s" }}</span>{% endif %}
+        </div>
+        {% if workout_groups %}
+            <div class="stack-list">
+                {% for workout_group in workout_groups %}
+                    <a class="list-card" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
+                        <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
+                        <span class="list-card__body">
+                            <strong>{{ workout_group.muscle_group.name }}</strong>
+                            <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }}</small>
+                        </span>
+                        <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
+                <h3>Nenhum grupo adicionado</h3>
+                <p>Escolha abaixo o que você vai treinar hoje.</p>
+            </div>
+        {% endif %}
+    </section>
 
-{% if not workout %}
-    <p>Nenhum treino registrado para este dia.</p>
-{% endif %}
+    <section class="content-section panel">
+        <div class="section-heading">
+            <div><p class="eyebrow eyebrow--accent">Montar treino</p><h2>Adicionar grupos</h2></div>
+            <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+        </div>
+        {% if add_group_form.fields.muscle_groups.queryset %}
+            <form method="post" action="{% url 'core:add_muscle_groups' date_str=workout_date|date:'Y-m-d' %}" class="selection-form">
+                {% csrf_token %}
+                <div class="choice-list">{{ add_group_form.muscle_groups }}</div>
+                {% for error in add_group_form.muscle_groups.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
+            </form>
+        {% else %}
+            <p class="muted">Todos os grupos disponíveis já fazem parte deste treino.</p>
+        {% endif %}
+    </section>
 
-<h2>Grupos musculares</h2>
-{% if workout_groups %}
-    <ul>
-        {% for workout_group in workout_groups %}
-            <li>
-                <a href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                    {{ workout_group.muscle_group.name }}
-                </a>
-                — {{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize }}
-            </li>
-        {% endfor %}
-    </ul>
-{% else %}
-    <p>Nenhum grupo muscular adicionado.</p>
-{% endif %}
-
-<h2>Adicionar grupo muscular</h2>
-{% if add_group_form.fields.muscle_groups.queryset %}
-    <form method="post" action="{% url 'core:add_muscle_groups' date_str=workout_date|date:'Y-m-d' %}">
-        {% csrf_token %}
-        {{ add_group_form.as_p }}
-        <button type="submit">Adicionar selecionados</button>
-    </form>
-{% else %}
-    <p>Não há outros grupos disponíveis.</p>
-{% endif %}
-
-{% if workout_groups %}
-    <h2>Remover grupos</h2>
-    <p>A remoção também exclui os exercícios e séries associados.</p>
-    <form method="post" action="{% url 'core:remove_muscle_groups' date_str=workout_date|date:'Y-m-d' %}">
-        {% csrf_token %}
-        {{ remove_group_form.as_p }}
-        <button type="submit">Remover selecionados</button>
-    </form>
-{% endif %}
+    {% if workout_groups %}
+        <details class="danger-zone">
+            <summary>Gerenciar remoção de grupos</summary>
+            <div class="danger-zone__content">
+                <p>Ao remover um grupo, seus exercícios e séries também serão excluídos.</p>
+                <form method="post" action="{% url 'core:remove_muscle_groups' date_str=workout_date|date:'Y-m-d' %}" class="selection-form">
+                    {% csrf_token %}
+                    <div class="choice-list choice-list--danger">{{ remove_group_form.muscle_groups }}</div>
+                    <button class="button button--danger button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">delete</span> Remover selecionados</button>
+                </form>
+            </div>
+        </details>
+    {% endif %}
+</div>
 {% endblock %}
