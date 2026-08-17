@@ -27,10 +27,7 @@
                             <span class="list-card__body"><strong>{{ workout_exercise.exercise.name }}</strong><small>{{ workout_exercise.working_sets }} série{{ workout_exercise.working_sets|pluralize:"s" }} válida{{ workout_exercise.working_sets|pluralize:"s" }}</small></span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>
-                        <form method="post" action="{% url 'core:remove_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
-                            {% csrf_token %}
-                            <button class="icon-button icon-button--danger" type="submit" aria-label="Remover {{ workout_exercise.exercise.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
-                        </form>
+                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_exercise' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" aria-label="Excluir {{ workout_exercise.exercise.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                     </article>
                 {% endfor %}
             </div>

@@ -278,7 +278,7 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTrue(WorkoutMuscleGroup.objects.filter(pk=workout_group.pk).exists())
 
-    def test_group_removal_requires_post(self):
+    def test_group_removal_requires_confirmation(self):
         _, workout_group, _ = self.create_exercise_entry()
         self.client.force_login(self.user_a)
 
@@ -289,8 +289,35 @@ class WorkoutFlowTests(TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Excluir Quadríceps?")
+        self.assertContains(response, "Confirmar exclusão")
         self.assertTrue(WorkoutMuscleGroup.objects.filter(pk=workout_group.pk).exists())
+
+    def test_exercise_removal_requires_confirmation(self):
+        _, workout_group, workout_exercise = self.create_exercise_entry()
+        self.client.force_login(self.user_a)
+        remove_url = reverse(
+            "core:remove_exercise",
+            kwargs={"date_str": "2026-08-14", "pk": workout_exercise.pk},
+        )
+
+        confirmation = self.client.get(remove_url)
+
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertContains(confirmation, "Excluir Agachamento Livre?")
+        self.assertTrue(WorkoutExercise.objects.filter(pk=workout_exercise.pk).exists())
+
+        response = self.client.post(remove_url)
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+        )
+        self.assertFalse(WorkoutExercise.objects.filter(pk=workout_exercise.pk).exists())
 
     def test_adding_exercise_redirects_to_its_logging_page(self):
         workout = Workout.objects.create(user=self.user_a, date=self.workout_date)

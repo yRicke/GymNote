@@ -39,10 +39,7 @@
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>
-                        <form method="post" action="{% url 'core:remove_muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                            {% csrf_token %}
-                            <button class="icon-button icon-button--danger" type="submit" aria-label="Remover {{ workout_group.muscle_group.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
-                        </form>
+                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}" aria-label="Excluir {{ workout_group.muscle_group.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                     </article>
                 {% endfor %}
             </div>
