@@ -136,10 +136,6 @@ def workout_day(request, date_str):
         id__in=added_group_ids
     )
     add_group_form = MuscleGroupSelectionForm(queryset=available_groups, prefix="add")
-    remove_group_form = MuscleGroupSelectionForm(
-        queryset=MuscleGroup.objects.filter(id__in=added_group_ids),
-        prefix="remove",
-    )
     return render(
         request,
         "core/workout_day.html",
@@ -148,7 +144,6 @@ def workout_day(request, date_str):
             "workout": workout,
             "workout_groups": workout_groups,
             "add_group_form": add_group_form,
-            "remove_group_form": remove_group_form,
         },
     )
 
@@ -202,24 +197,10 @@ def add_muscle_groups(request, date_str):
 
 @require_POST
 @login_required
-def remove_muscle_groups(request, date_str):
-    workout_date = _parse_date(date_str)
-    workout = get_object_or_404(Workout, user=request.user, date=workout_date)
-    current_groups = MuscleGroup.objects.filter(
-        workout_entries__workout=workout
-    ).distinct()
-    form = MuscleGroupSelectionForm(
-        request.POST,
-        queryset=current_groups,
-        prefix="remove",
-    )
-    if form.is_valid():
-        workout.workout_muscle_groups.filter(
-            muscle_group__in=form.cleaned_data["muscle_groups"]
-        ).delete()
-        messages.success(request, "Grupo(s) muscular(es) removido(s).")
-    else:
-        messages.error(request, "Selecione ao menos um grupo muscular válido.")
+def remove_muscle_group(request, date_str, pk):
+    workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
+    workout_group.delete()
+    messages.success(request, "Grupo muscular removido.")
     return redirect("core:workout_day", date_str=date_str)
 
 

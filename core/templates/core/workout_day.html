@@ -30,14 +30,20 @@
         {% if workout_groups %}
             <div class="stack-list">
                 {% for workout_group in workout_groups %}
-                    <a class="list-card" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                        <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
-                        <span class="list-card__body">
-                            <strong>{{ workout_group.muscle_group.name }}</strong>
-                            <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }}</small>
-                        </span>
-                        <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
-                    </a>
+                    <article class="list-card list-card--actions">
+                        <a class="list-card__main" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
+                            <span class="list-card__body">
+                                <strong>{{ workout_group.muscle_group.name }}</strong>
+                                <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }}</small>
+                            </span>
+                            <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
+                        </a>
+                        <form method="post" action="{% url 'core:remove_muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
+                            {% csrf_token %}
+                            <button class="icon-button icon-button--danger" type="submit" aria-label="Remover {{ workout_group.muscle_group.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></button>
+                        </form>
+                    </article>
                 {% endfor %}
             </div>
         {% else %}
@@ -66,18 +72,5 @@
         {% endif %}
     </section>
 
-    {% if workout_groups %}
-        <details class="danger-zone">
-            <summary>Gerenciar remoção de grupos</summary>
-            <div class="danger-zone__content">
-                <p>Ao remover um grupo, seus exercícios e séries também serão excluídos.</p>
-                <form method="post" action="{% url 'core:remove_muscle_groups' date_str=workout_date|date:'Y-m-d' %}" class="selection-form">
-                    {% csrf_token %}
-                    <div class="choice-list choice-list--danger">{{ remove_group_form.muscle_groups }}</div>
-                    <button class="button button--danger button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">delete</span> Remover selecionados</button>
-                </form>
-            </div>
-        </details>
-    {% endif %}
 </div>
 {% endblock %}

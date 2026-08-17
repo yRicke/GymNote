@@ -405,18 +405,6 @@ a.list-card:focus-visible,
 }
 
 .choice-list input[type="checkbox"]:checked { border: 5px solid var(--accent); background: var(--on-accent); }
-.choice-list--danger input[type="checkbox"]:checked { border-color: var(--danger); background: var(--danger-container); }
-
-.danger-zone {
-    margin-top: 30px;
-    border: 1px solid rgba(255, 180, 171, .2);
-    border-radius: var(--radius-md);
-    color: var(--danger);
-}
-
-.danger-zone summary { padding: 15px 17px; font-size: .86rem; cursor: pointer; }
-.danger-zone__content { padding: 0 16px 16px; }
-.danger-zone__content > p { color: var(--text-muted); font-size: .82rem; }
 
 .search-form {
     display: flex;
