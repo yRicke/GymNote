@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Carregar predefinição | GymNote{% endblock %}
+{% block header_leading %}
+    <div class="app-header__leading">
+        <a class="icon-button" href="{% url 'core:workout_day' date_str=workout_group.workout.date|date:'Y-m-d' %}" aria-label="Voltar ao treino">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        </a>
+        <span class="brand">Predefinição</span>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell page-shell--narrow">
+    <section class="page-heading">
+        <p class="eyebrow eyebrow--accent">{{ workout_group.muscle_group.name }}</p>
+        <h1>Carregar uma predefinição?</h1>
+        <p>Você possui combinações salvas para este grupo. Escolha uma delas ou continue sem carregar.</p>
+    </section>
+
+    <section class="content-section">
+        <div class="stack-list">
+            {% for preset in presets %}
+                <article class="panel preset-card">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Predefinição</p>
+                            <h2>{{ preset.name }}</h2>
+                        </div>
+                        <span class="pill">{{ preset.exercise_entries.all|length }} exercício{{ preset.exercise_entries.all|length|pluralize:"s" }}</span>
+                    </div>
+                    <ol class="preset-card__exercises">
+                        {% for entry in preset.exercise_entries.all %}
+                            <li>{{ entry.exercise.name }}</li>
+                        {% empty %}
+                            <li>Nenhum exercício disponível.</li>
+                        {% endfor %}
+                    </ol>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="preset_id" value="{{ preset.pk }}">
+                        <button class="button button--primary button--full" type="submit">
+                            <span class="material-symbols-outlined" aria-hidden="true">playlist_add_check</span>
+                            Carregar {{ preset.name }}
+                        </button>
+                    </form>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <form method="post" class="content-section">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="skip">
+        <button class="button button--ghost button--full" type="submit">Continuar sem predefinição</button>
+    </form>
+</div>
+{% endblock %}

@@ -12,10 +12,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import (
+    CustomExerciseForm,
     ExerciseSelectionForm,
     ExerciseSetForm,
     MuscleGroupSelectionForm,
+    PresetGroupSelectionForm,
     WorkoutFilterForm,
+    WorkoutPresetForm,
 )
 from .models import (
     Exercise,
@@ -24,6 +27,7 @@ from .models import (
     Workout,
     WorkoutExercise,
     WorkoutMuscleGroup,
+    WorkoutPreset,
 )
 
 
@@ -60,6 +64,59 @@ def _owned_workout_exercise(user, date_str, pk):
         workout_muscle_group__workout__user=user,
         workout_muscle_group__workout__date=workout_date,
     )
+
+
+def _available_exercises_for(user, muscle_group):
+    return Exercise.objects.filter(
+        Q(user__isnull=True) | Q(user=user),
+        is_active=True,
+        muscle_groups=muscle_group,
+    ).distinct()
+
+
+def _continue_after_preset_offer(request, date_str, workout_group):
+    queue = request.session.get("preset_offer_queue")
+    if not queue or queue.get("date") != date_str:
+        return redirect(
+            "core:muscle_group",
+            date_str=date_str,
+            pk=workout_group.pk,
+        )
+
+    group_ids = queue.get("group_ids", [])
+    if workout_group.pk in group_ids:
+        group_ids = group_ids[group_ids.index(workout_group.pk) + 1 :]
+    else:
+        group_ids = []
+
+    workout_date = _parse_date(date_str)
+    for position, group_id in enumerate(group_ids):
+        next_group = WorkoutMuscleGroup.objects.filter(
+            pk=group_id,
+            workout__user=request.user,
+            workout__date=workout_date,
+        ).first()
+        if next_group and WorkoutPreset.objects.filter(
+            user=request.user,
+            muscle_group_id=next_group.muscle_group_id,
+        ).exists():
+            queue["group_ids"] = group_ids[position:]
+            request.session["preset_offer_queue"] = queue
+            return redirect(
+                "core:workout_group_preset_offer",
+                date_str=date_str,
+                pk=next_group.pk,
+            )
+
+    fallback = queue.get("fallback", "workout")
+    request.session.pop("preset_offer_queue", None)
+    if fallback == "group":
+        return redirect(
+            "core:muscle_group",
+            date_str=date_str,
+            pk=workout_group.pk,
+        )
+    return redirect("core:workout_day", date_str=date_str)
 
 
 def landing_page(request):
@@ -157,6 +214,222 @@ def workout_list(request):
 
 
 @login_required
+def personalization(request):
+    custom_exercises = (
+        Exercise.objects.filter(user=request.user, is_active=True)
+        .prefetch_related("muscle_groups")
+        .order_by("name")
+    )
+    return render(
+        request,
+        "core/personalization_exercises.html",
+        {
+            "custom_exercises": custom_exercises,
+            "active_personalization_tab": "exercises",
+        },
+    )
+
+
+@login_required
+def custom_exercise_create(request):
+    form = CustomExerciseForm(
+        request.POST or None,
+        user=request.user,
+    )
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Exercício personalizado criado.")
+        return redirect("core:personalization")
+    return render(
+        request,
+        "core/custom_exercise_form.html",
+        {
+            "form": form,
+            "page_title": "Novo exercício",
+        },
+    )
+
+
+@login_required
+def custom_exercise_edit(request, pk):
+    exercise = get_object_or_404(
+        Exercise,
+        pk=pk,
+        user=request.user,
+        is_active=True,
+    )
+    form = CustomExerciseForm(
+        request.POST or None,
+        instance=exercise,
+        user=request.user,
+    )
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Exercício personalizado atualizado.")
+        return redirect("core:personalization")
+    return render(
+        request,
+        "core/custom_exercise_form.html",
+        {
+            "form": form,
+            "page_title": "Editar exercício",
+            "exercise": exercise,
+        },
+    )
+
+
+@login_required
+def custom_exercise_delete(request, pk):
+    exercise = get_object_or_404(
+        Exercise,
+        pk=pk,
+        user=request.user,
+        is_active=True,
+    )
+    if request.method == "POST":
+        with transaction.atomic():
+            exercise.preset_entries.all().delete()
+            if exercise.workout_entries.exists():
+                exercise.is_active = False
+                exercise.save(update_fields=["is_active"])
+            else:
+                exercise.delete()
+        messages.success(request, "Exercício personalizado excluído.")
+        return redirect("core:personalization")
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir exercício personalizado",
+            "item_type": "exercício personalizado",
+            "item_name": exercise.name,
+            "warning": (
+                "Ele deixará de aparecer no catálogo. Registros anteriores "
+                "serão preservados."
+            ),
+            "cancel_url": reverse("core:personalization"),
+        },
+    )
+
+
+@login_required
+def workout_preset_list(request):
+    presets = (
+        WorkoutPreset.objects.filter(user=request.user)
+        .select_related("muscle_group")
+        .annotate(exercise_count=Count("exercise_entries"))
+        .order_by("name")
+    )
+    return render(
+        request,
+        "core/personalization_presets.html",
+        {
+            "presets": presets,
+            "active_personalization_tab": "presets",
+        },
+    )
+
+
+def _preset_group_form(request, preset=None):
+    if request.method == "POST":
+        group_data = request.POST
+    elif "muscle_group" in request.GET:
+        group_data = request.GET
+    elif preset:
+        group_data = {"muscle_group": preset.muscle_group_id}
+    else:
+        group_data = None
+    group_form = PresetGroupSelectionForm(group_data)
+    selected_group = None
+    if group_form.is_bound and group_form.is_valid():
+        selected_group = group_form.cleaned_data["muscle_group"]
+    return group_form, selected_group
+
+
+@login_required
+def workout_preset_create(request):
+    group_form, selected_group = _preset_group_form(request)
+    form = None
+    if selected_group:
+        form = WorkoutPresetForm(
+            request.POST or None,
+            user=request.user,
+            muscle_group=selected_group,
+        )
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, "Predefinição de treino criada.")
+            return redirect("core:personalization_presets")
+    return render(
+        request,
+        "core/workout_preset_form.html",
+        {
+            "form": form,
+            "group_form": group_form,
+            "selected_group": selected_group,
+            "page_title": "Nova predefinição",
+        },
+    )
+
+
+@login_required
+def workout_preset_edit(request, pk):
+    preset = get_object_or_404(
+        WorkoutPreset,
+        pk=pk,
+        user=request.user,
+    )
+    group_form, selected_group = _preset_group_form(request, preset=preset)
+    form = None
+    if selected_group:
+        form = WorkoutPresetForm(
+            request.POST or None,
+            instance=preset,
+            user=request.user,
+            muscle_group=selected_group,
+        )
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, "Predefinição de treino atualizada.")
+            return redirect("core:personalization_presets")
+    return render(
+        request,
+        "core/workout_preset_form.html",
+        {
+            "form": form,
+            "group_form": group_form,
+            "selected_group": selected_group,
+            "page_title": "Editar predefinição",
+            "preset": preset,
+        },
+    )
+
+
+@login_required
+def workout_preset_delete(request, pk):
+    preset = get_object_or_404(
+        WorkoutPreset,
+        pk=pk,
+        user=request.user,
+    )
+    if request.method == "POST":
+        preset.delete()
+        messages.success(request, "Predefinição de treino excluída.")
+        return redirect("core:personalization_presets")
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir predefinição",
+            "item_type": "predefinição de treino",
+            "item_name": preset.name,
+            "warning": "Os treinos já registrados não serão alterados.",
+            "cancel_url": reverse("core:personalization_presets"),
+        },
+    )
+
+
+@login_required
 def workout_day(request, date_str):
     workout_date = _parse_date(date_str)
     workout = (
@@ -213,6 +486,7 @@ def add_muscle_groups(request, date_str):
     if form.is_valid():
         selected_groups = list(form.cleaned_data["muscle_groups"])
         first_workout_group = None
+        created_workout_groups = []
         with transaction.atomic():
             workout, _ = Workout.objects.get_or_create(
                 user=request.user,
@@ -227,8 +501,34 @@ def add_muscle_groups(request, date_str):
                 )
                 if first_workout_group is None:
                     first_workout_group = workout_group
+                created_workout_groups.append(workout_group)
                 next_order += 1
         messages.success(request, "Grupo(s) muscular(es) adicionado(s).")
+        preset_group_ids = set(
+            WorkoutPreset.objects.filter(
+                user=request.user,
+                muscle_group_id__in=[
+                    workout_group.muscle_group_id
+                    for workout_group in created_workout_groups
+                ],
+            ).values_list("muscle_group_id", flat=True)
+        )
+        preset_offer_groups = [
+            workout_group
+            for workout_group in created_workout_groups
+            if workout_group.muscle_group_id in preset_group_ids
+        ]
+        if preset_offer_groups:
+            request.session["preset_offer_queue"] = {
+                "date": date_str,
+                "group_ids": [group.pk for group in preset_offer_groups],
+                "fallback": "group" if len(selected_groups) == 1 else "workout",
+            }
+            return redirect(
+                "core:workout_group_preset_offer",
+                date_str=date_str,
+                pk=preset_offer_groups[0].pk,
+            )
         if len(selected_groups) == 1:
             return redirect(
                 "core:muscle_group",
@@ -275,9 +575,9 @@ def muscle_group_detail(request, date_str, pk):
             filter=Q(sets__is_working_set=True),
         ),
     )
-    available_exercises = Exercise.objects.filter(
-        is_active=True,
-        muscle_groups=workout_group.muscle_group,
+    available_exercises = _available_exercises_for(
+        request.user,
+        workout_group.muscle_group,
     ).exclude(id__in=added_exercises.values_list("exercise_id", flat=True))
     query = request.GET.get("q", "").strip()
     if query:
@@ -301,9 +601,9 @@ def muscle_group_detail(request, date_str, pk):
 def add_exercises(request, date_str, pk):
     workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
     existing_ids = workout_group.workout_exercises.values_list("exercise_id", flat=True)
-    available_exercises = Exercise.objects.filter(
-        is_active=True,
-        muscle_groups=workout_group.muscle_group,
+    available_exercises = _available_exercises_for(
+        request.user,
+        workout_group.muscle_group,
     ).exclude(id__in=existing_ids)
     form = ExerciseSelectionForm(request.POST, queryset=available_exercises)
     if form.is_valid():
@@ -331,6 +631,94 @@ def add_exercises(request, date_str, pk):
 
     messages.error(request, "Selecione ao menos um exercício válido.")
     return redirect("core:muscle_group", date_str=date_str, pk=pk)
+
+
+@login_required
+def workout_group_preset_offer(request, date_str, pk):
+    workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
+    presets = (
+        WorkoutPreset.objects.filter(
+            user=request.user,
+            muscle_group=workout_group.muscle_group,
+        )
+        .prefetch_related("exercise_entries__exercise")
+        .order_by("name")
+    )
+    if not presets.exists():
+        return _continue_after_preset_offer(
+            request,
+            date_str,
+            workout_group,
+        )
+
+    if request.method == "POST":
+        if request.POST.get("action") == "skip":
+            return _continue_after_preset_offer(
+                request,
+                date_str,
+                workout_group,
+            )
+
+        preset = get_object_or_404(
+            presets,
+            pk=request.POST.get("preset_id"),
+        )
+        with transaction.atomic():
+            locked_group = WorkoutMuscleGroup.objects.select_for_update().get(
+                pk=workout_group.pk
+            )
+            existing_exercise_ids = set(
+                locked_group.workout_exercises.values_list("exercise_id", flat=True)
+            )
+            next_order = _next_order(locked_group.workout_exercises.all())
+            added_count = 0
+            for preset_entry in preset.exercise_entries.select_related(
+                "exercise"
+            ).order_by("order"):
+                exercise = preset_entry.exercise
+                is_available = (
+                    exercise.is_active
+                    and exercise.user_id in (None, request.user.id)
+                    and exercise.muscle_groups.filter(
+                        pk=workout_group.muscle_group_id
+                    ).exists()
+                )
+                if not is_available or exercise.pk in existing_exercise_ids:
+                    continue
+                WorkoutExercise.objects.create(
+                    workout_muscle_group=locked_group,
+                    exercise=exercise,
+                    order=next_order,
+                )
+                existing_exercise_ids.add(exercise.pk)
+                next_order += 1
+                added_count += 1
+        if added_count:
+            exercise_label = "exercício" if added_count == 1 else "exercícios"
+            messages.success(
+                request,
+                f'Predefinição "{preset.name}" carregada com '
+                f"{added_count} {exercise_label}.",
+            )
+        else:
+            messages.info(
+                request,
+                "Todos os exercícios disponíveis desta predefinição já estavam no grupo.",
+            )
+        return _continue_after_preset_offer(
+            request,
+            date_str,
+            workout_group,
+        )
+
+    return render(
+        request,
+        "core/workout_preset_offer.html",
+        {
+            "workout_group": workout_group,
+            "presets": presets,
+        },
+    )
 
 
 @login_required

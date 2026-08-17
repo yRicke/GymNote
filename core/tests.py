@@ -15,6 +15,8 @@ from .models import (
     Workout,
     WorkoutExercise,
     WorkoutMuscleGroup,
+    WorkoutPreset,
+    WorkoutPresetExercise,
 )
 
 
@@ -674,6 +676,285 @@ class WorkoutFlowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class PersonalizationTests(TestCase):
+    workout_date = date(2026, 8, 14)
+
+    def setUp(self):
+        self.user_a = User.objects.create_user("owner", password="senha-teste-123")
+        self.user_b = User.objects.create_user("visitor", password="senha-teste-123")
+        self.quadriceps = MuscleGroup.objects.create(
+            name="Quadríceps",
+            slug="quadriceps-personalization",
+            order=1,
+        )
+        self.posterior = MuscleGroup.objects.create(
+            name="Posterior de Coxa",
+            slug="posterior-personalization",
+            order=2,
+        )
+        self.system_exercise = Exercise.objects.create(name="Agachamento Livre")
+        self.system_exercise.muscle_groups.add(self.quadriceps)
+
+    def create_custom_exercise(self, user=None, name="Agachamento personalizado"):
+        exercise = Exercise.objects.create(
+            user=user or self.user_a,
+            name=name,
+        )
+        exercise.muscle_groups.add(self.quadriceps)
+        return exercise
+
+    def create_preset(self, user=None, muscle_group=None, name="Treino A"):
+        preset = WorkoutPreset.objects.create(
+            user=user or self.user_a,
+            name=name,
+            muscle_group=muscle_group or self.quadriceps,
+        )
+        return preset
+
+    def test_personalization_requires_authentication(self):
+        response = self.client.get(reverse("core:personalization"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+
+    def test_user_creates_custom_exercise_and_only_sees_owned_catalog(self):
+        self.client.force_login(self.user_a)
+        create_response = self.client.post(
+            reverse("core:personalization_exercise_create"),
+            {
+                "name": "Extensora unilateral",
+                "muscle_group": self.quadriceps.pk,
+            },
+        )
+        custom_exercise = Exercise.objects.get(name="Extensora unilateral")
+        other_users_exercise = self.create_custom_exercise(
+            user=self.user_b,
+            name="Exercício privado de outro usuário",
+        )
+        workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
+        workout_group = WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+
+        catalog_response = self.client.get(
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            )
+        )
+
+        self.assertRedirects(create_response, reverse("core:personalization"))
+        self.assertEqual(custom_exercise.user, self.user_a)
+        self.assertEqual(
+            list(custom_exercise.muscle_groups.all()),
+            [self.quadriceps],
+        )
+        self.assertContains(catalog_response, self.system_exercise.name)
+        self.assertContains(catalog_response, "Extensora unilateral · Meu exercício")
+        self.assertNotContains(catalog_response, other_users_exercise.name)
+
+        rejected_response = self.client.post(
+            reverse(
+                "core:add_exercises",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+            {"exercises": [other_users_exercise.pk]},
+        )
+        self.assertEqual(rejected_response.status_code, 302)
+        self.assertFalse(workout_group.workout_exercises.exists())
+
+    def test_user_cannot_manage_another_users_custom_exercise(self):
+        exercise = self.create_custom_exercise(user=self.user_b)
+        self.client.force_login(self.user_a)
+
+        edit_response = self.client.get(
+            reverse(
+                "core:personalization_exercise_edit",
+                kwargs={"pk": exercise.pk},
+            )
+        )
+        delete_response = self.client.post(
+            reverse(
+                "core:personalization_exercise_delete",
+                kwargs={"pk": exercise.pk},
+            )
+        )
+
+        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(Exercise.objects.filter(pk=exercise.pk).exists())
+
+    def test_user_creates_preset_with_system_and_custom_exercises(self):
+        custom_exercise = self.create_custom_exercise()
+        other_users_exercise = self.create_custom_exercise(
+            user=self.user_b,
+            name="Exercício de outro usuário",
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse("core:personalization_preset_create"),
+            {
+                "muscle_group": self.quadriceps.pk,
+                "name": "Quadríceps principal",
+                "exercises": [self.system_exercise.pk, custom_exercise.pk],
+            },
+        )
+        preset = WorkoutPreset.objects.get(name="Quadríceps principal")
+
+        self.assertRedirects(
+            response,
+            reverse("core:personalization_presets"),
+        )
+        self.assertEqual(preset.user, self.user_a)
+        self.assertEqual(preset.muscle_group, self.quadriceps)
+        self.assertEqual(
+            set(preset.exercises.values_list("pk", flat=True)),
+            {self.system_exercise.pk, custom_exercise.pk},
+        )
+
+        invalid_response = self.client.post(
+            reverse("core:personalization_preset_create"),
+            {
+                "muscle_group": self.quadriceps.pk,
+                "name": "Predefinição inválida",
+                "exercises": [other_users_exercise.pk],
+            },
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertFalse(
+            WorkoutPreset.objects.filter(name="Predefinição inválida").exists()
+        )
+
+    def test_adding_group_offers_and_loads_owned_preset(self):
+        custom_exercise = self.create_custom_exercise()
+        preset = self.create_preset(name="Quadríceps completo")
+        WorkoutPresetExercise.objects.create(
+            preset=preset,
+            exercise=self.system_exercise,
+            order=1,
+        )
+        WorkoutPresetExercise.objects.create(
+            preset=preset,
+            exercise=custom_exercise,
+            order=2,
+        )
+        self.client.force_login(self.user_a)
+
+        add_group_response = self.client.post(
+            reverse(
+                "core:add_muscle_groups",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+            {"add-muscle_groups": [self.quadriceps.pk]},
+        )
+        workout_group = WorkoutMuscleGroup.objects.get(
+            workout__user=self.user_a,
+            muscle_group=self.quadriceps,
+        )
+        offer_url = reverse(
+            "core:workout_group_preset_offer",
+            kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+        )
+
+        self.assertRedirects(add_group_response, offer_url)
+        offer_response = self.client.get(offer_url)
+        self.assertContains(offer_response, "Carregar uma predefinição?")
+        self.assertContains(offer_response, preset.name)
+
+        load_response = self.client.post(offer_url, {"preset_id": preset.pk})
+        self.assertRedirects(
+            load_response,
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            ),
+        )
+        self.assertEqual(
+            list(
+                workout_group.workout_exercises.order_by("order").values_list(
+                    "exercise_id",
+                    flat=True,
+                )
+            ),
+            [self.system_exercise.pk, custom_exercise.pk],
+        )
+
+    def test_multiple_group_offers_return_to_workout_after_last_choice(self):
+        posterior_exercise = Exercise.objects.create(name="Stiff")
+        posterior_exercise.muscle_groups.add(self.posterior)
+        quadriceps_preset = self.create_preset(name="Quadríceps A")
+        posterior_preset = self.create_preset(
+            muscle_group=self.posterior,
+            name="Posterior A",
+        )
+        WorkoutPresetExercise.objects.create(
+            preset=quadriceps_preset,
+            exercise=self.system_exercise,
+            order=1,
+        )
+        WorkoutPresetExercise.objects.create(
+            preset=posterior_preset,
+            exercise=posterior_exercise,
+            order=1,
+        )
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:add_muscle_groups",
+                kwargs={"date_str": "2026-08-14"},
+            ),
+            {"add-muscle_groups": [self.quadriceps.pk, self.posterior.pk]},
+        )
+        groups = list(
+            WorkoutMuscleGroup.objects.filter(workout__user=self.user_a).order_by(
+                "order"
+            )
+        )
+        first_offer = reverse(
+            "core:workout_group_preset_offer",
+            kwargs={"date_str": "2026-08-14", "pk": groups[0].pk},
+        )
+        second_offer = reverse(
+            "core:workout_group_preset_offer",
+            kwargs={"date_str": "2026-08-14", "pk": groups[1].pk},
+        )
+
+        self.assertRedirects(response, first_offer)
+        skip_response = self.client.post(first_offer, {"action": "skip"})
+        self.assertRedirects(skip_response, second_offer)
+        final_response = self.client.post(
+            second_offer,
+            {"preset_id": posterior_preset.pk},
+        )
+        self.assertRedirects(
+            final_response,
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"}),
+        )
+        self.assertEqual(groups[0].workout_exercises.count(), 0)
+        self.assertEqual(groups[1].workout_exercises.count(), 1)
+
+    def test_bottom_navigation_places_personalization_between_workouts_and_profile(self):
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(reverse("core:personalization"))
+        content = response.content.decode()
+        bottom_navigation = content.split('<nav class="bottom-nav"', maxsplit=1)[1]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(
+            bottom_navigation.index("Treinos"),
+            bottom_navigation.index("Personalização"),
+        )
+        self.assertLess(
+            bottom_navigation.index("Personalização"),
+            bottom_navigation.index("Perfil"),
+        )
 
 
 class SeedGymDataTests(TestCase):

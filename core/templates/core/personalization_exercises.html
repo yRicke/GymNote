@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Meus exercícios | GymNote{% endblock %}
+{% block header_title %}Personalização{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <section class="page-heading">
+        <p class="eyebrow eyebrow--accent">Seu catálogo</p>
+        <h1>Personalização</h1>
+        <p>Crie exercícios próprios e predefinições para montar seus treinos mais rápido.</p>
+    </section>
+
+    {% include "includes/personalization_tabs.html" %}
+
+    <section class="content-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Catálogo pessoal</p>
+                <h2>Meus exercícios</h2>
+            </div>
+            <a class="button button--primary button--compact" href="{% url 'core:personalization_exercise_create' %}">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                Novo
+            </a>
+        </div>
+
+        {% if custom_exercises %}
+            <div class="stack-list">
+                {% for exercise in custom_exercises %}
+                    <article class="list-card list-card--actions">
+                        <a class="list-card__main" href="{% url 'core:personalization_exercise_edit' pk=exercise.pk %}" aria-label="Editar {{ exercise.name }}">
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
+                            <span class="list-card__body">
+                                <strong>{{ exercise.name }}</strong>
+                                <small>{% for group in exercise.muscle_groups.all %}{{ group.name }}{% empty %}Sem grupo muscular{% endfor %}</small>
+                            </span>
+                            <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">edit</span>
+                        </a>
+                        <a class="icon-button icon-button--danger" href="{% url 'core:personalization_exercise_delete' pk=exercise.pk %}" aria-label="Excluir {{ exercise.name }}">
+                            <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <span class="material-symbols-outlined" aria-hidden="true">exercise</span>
+                <h3>Nenhum exercício personalizado</h3>
+                <p>Crie seu primeiro exercício para encontrá-lo junto ao catálogo do GymNote.</p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
