@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 
+from .management.commands.seed_gym_data import CATALOG
 from .models import (
     Exercise,
     ExerciseSet,
@@ -378,10 +379,22 @@ class SeedGymDataTests(TestCase):
         call_command("seed_gym_data")
         call_command("seed_gym_data")
 
+        expected_exercises = {
+            exercise_name
+            for exercise_names in CATALOG.values()
+            for exercise_name in exercise_names
+        }
         self.assertEqual(MuscleGroup.objects.count(), 10)
+        self.assertEqual(Exercise.objects.count(), len(expected_exercises))
         self.assertEqual(Exercise.objects.filter(name="Agachamento Livre").count(), 1)
         self.assertEqual(
             Exercise.objects.get(name="Agachamento Livre").muscle_groups.count(),
+            2,
+        )
+        self.assertTrue(Exercise.objects.filter(name="Crossover Alto").exists())
+        self.assertTrue(Exercise.objects.filter(name="Crossover Baixo").exists())
+        self.assertEqual(
+            Exercise.objects.get(name="Supino Fechado").muscle_groups.count(),
             2,
         )
 
