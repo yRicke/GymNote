@@ -222,10 +222,9 @@ class WorkoutFlowTests(TestCase):
 
         response = self.client.post(
             reverse(
-                "core:remove_muscle_groups",
-                kwargs={"date_str": "2026-08-14"},
+                "core:remove_muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
             ),
-            {"remove-muscle_groups": [self.quadriceps.pk]},
         )
 
         self.assertRedirects(
@@ -243,7 +242,7 @@ class WorkoutFlowTests(TestCase):
             name="Posterior de Coxa", slug="posterior-de-coxa", order=2
         )
         workout = Workout.objects.create(user=self.user_a, date=self.workout_date)
-        WorkoutMuscleGroup.objects.create(
+        quadriceps_group = WorkoutMuscleGroup.objects.create(
             workout=workout,
             muscle_group=self.quadriceps,
             order=1,
@@ -257,14 +256,41 @@ class WorkoutFlowTests(TestCase):
 
         self.client.post(
             reverse(
-                "core:remove_muscle_groups",
-                kwargs={"date_str": "2026-08-14"},
+                "core:remove_muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": quadriceps_group.pk},
             ),
-            {"remove-muscle_groups": [self.quadriceps.pk]},
         )
 
         self.assertTrue(Workout.objects.filter(pk=workout.pk).exists())
         self.assertEqual(workout.workout_muscle_groups.count(), 1)
+
+    def test_user_cannot_remove_another_users_workout_group(self):
+        _, workout_group, _ = self.create_exercise_entry(user=self.user_b)
+        self.client.force_login(self.user_a)
+
+        response = self.client.post(
+            reverse(
+                "core:remove_muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(WorkoutMuscleGroup.objects.filter(pk=workout_group.pk).exists())
+
+    def test_group_removal_requires_post(self):
+        _, workout_group, _ = self.create_exercise_entry()
+        self.client.force_login(self.user_a)
+
+        response = self.client.get(
+            reverse(
+                "core:remove_muscle_group",
+                kwargs={"date_str": "2026-08-14", "pk": workout_group.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(WorkoutMuscleGroup.objects.filter(pk=workout_group.pk).exists())
 
     def test_adding_exercise_redirects_to_its_logging_page(self):
         workout = Workout.objects.create(user=self.user_a, date=self.workout_date)

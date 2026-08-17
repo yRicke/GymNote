@@ -14,9 +14,9 @@ urlpatterns = [
         name="add_muscle_groups",
     ),
     path(
-        "treino/<str:date_str>/grupos/remover/",
-        views.remove_muscle_groups,
-        name="remove_muscle_groups",
+        "treino/<str:date_str>/grupo/<int:pk>/remover/",
+        views.remove_muscle_group,
+        name="remove_muscle_group",
     ),
     path(
         "treino/<str:date_str>/grupo/<int:pk>/",
