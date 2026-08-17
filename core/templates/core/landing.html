@@ -96,21 +96,22 @@
     </a>
 </section>
 
-<section class="landing-section landing-product" id="produto" aria-labelledby="product-title">
+<section class="landing-section landing-product" id="produto" aria-labelledby="product-title" data-section-reveal>
+    <span class="landing-section__transition" data-section-transition aria-hidden="true"></span>
     <div class="landing-container">
-        <div class="landing-section__heading">
+        <div class="landing-section__heading" data-gsap-heading>
             <p class="landing-kicker"><span></span> A interface</p>
             <h2 id="product-title">Pensada para o ritmo da academia.</h2>
             <p>Grandes áreas de toque, pouca digitação e cada informação no lugar certo.</p>
         </div>
 
         <div class="product-grid">
-            <article class="product-card product-card--calendar">
+            <article class="product-card product-card--calendar" data-gsap-card>
                 <div class="product-card__copy">
                     <span class="product-card__number">01</span>
                     <div><p class="landing-label">Calendário</p><h3>Todo treino começa pelo dia.</h3></div>
                 </div>
-                <div class="calendar-demo" aria-hidden="true">
+                <div class="calendar-demo" data-gsap-demo aria-hidden="true">
                     <div class="calendar-demo__top"><strong>Agosto</strong><span>2026</span></div>
                     <div class="calendar-demo__week"><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span></div>
                     <div class="calendar-demo__days">
@@ -121,24 +122,24 @@
                 </div>
             </article>
 
-            <article class="product-card product-card--workout">
+            <article class="product-card product-card--workout" data-gsap-card>
                 <div class="product-card__copy">
                     <span class="product-card__number">02</span>
                     <div><p class="landing-label">Treino</p><h3>Grupos e exercícios sem bagunça.</h3></div>
                 </div>
-                <div class="workout-demo" aria-hidden="true">
+                <div class="workout-demo" data-gsap-demo aria-hidden="true">
                     <div class="workout-demo__header"><span>SEX, 14 AGO</span><strong>Leg Day</strong></div>
                     <div class="workout-demo__group"><i class="material-symbols-outlined">fitness_center</i><span><b>Quadríceps</b><small>4 exercícios</small></span><i class="material-symbols-outlined">chevron_right</i></div>
                     <div class="workout-demo__group"><i class="material-symbols-outlined">fitness_center</i><span><b>Posterior</b><small>3 exercícios</small></span><i class="material-symbols-outlined">chevron_right</i></div>
                 </div>
             </article>
 
-            <article class="product-card product-card--sets">
+            <article class="product-card product-card--sets" data-gsap-card>
                 <div class="product-card__copy">
                     <span class="product-card__number">03</span>
                     <div><p class="landing-label">Séries</p><h3>Peso e repetições em segundos.</h3></div>
                 </div>
-                <div class="sets-demo" aria-hidden="true">
+                <div class="sets-demo" data-gsap-demo aria-hidden="true">
                     <div class="sets-demo__title"><span>Agachamento livre</span><small>1 série válida</small></div>
                     <div class="sets-demo__row"><span>01</span><strong>20 kg</strong><em>10 reps</em><i class="material-symbols-outlined">radio_button_unchecked</i></div>
                     <div class="sets-demo__row"><span>02</span><strong>60 kg</strong><em>4 reps</em><i class="material-symbols-outlined is-valid">check_circle</i></div>
@@ -148,9 +149,10 @@
     </div>
 </section>
 
-<section class="landing-section landing-contrast" aria-labelledby="contrast-title">
+<section class="landing-section landing-contrast" aria-labelledby="contrast-title" data-section-reveal>
+    <span class="landing-section__transition" data-section-transition aria-hidden="true"></span>
     <div class="landing-container landing-contrast__grid">
-        <div class="landing-contrast__copy">
+        <div class="landing-contrast__copy" data-contrast-copy>
             <p class="landing-kicker"><span></span> Notas, só que melhores</p>
             <h2 id="contrast-title">Mantenha a velocidade.<br>Elimine a bagunça.</h2>
             <p>O bloco de notas é rápido hoje e confuso amanhã. O GymNote adiciona estrutura sem atrapalhar sua série.</p>
@@ -171,21 +173,39 @@
     </div>
 </section>
 
-<section class="landing-section landing-steps" id="como-funciona" aria-labelledby="steps-title">
+<section class="landing-section landing-steps" id="como-funciona" aria-labelledby="steps-title" data-section-reveal>
+    <span class="landing-section__transition" data-section-transition aria-hidden="true"></span>
     <div class="landing-container">
-        <div class="landing-section__heading landing-section__heading--center">
-            <p class="landing-kicker"><span></span> Fluxo direto</p>
-            <h2 id="steps-title">Do calendário à última repetição.</h2>
+        <div class="landing-section__heading landing-flow__heading" data-gsap-heading>
+            <p class="landing-kicker"><span></span> Sem etapas desnecessárias</p>
+            <h2 id="steps-title">Uma sequência natural para o seu treino.</h2>
+            <p>Você já sabe treinar. O GymNote só organiza o caminho entre escolher o dia e salvar a última série.</p>
         </div>
-        <ol class="steps-grid">
-            <li><span>01</span><i class="material-symbols-outlined" aria-hidden="true">calendar_month</i><h3>Escolha o dia</h3><p>Abra hoje ou registre um treino anterior pelo calendário.</p></li>
-            <li><span>02</span><i class="material-symbols-outlined" aria-hidden="true">exercise</i><h3>Monte o treino</h3><p>Selecione grupos musculares e exercícios do catálogo.</p></li>
-            <li><span>03</span><i class="material-symbols-outlined" aria-hidden="true">bolt</i><h3>Registre as séries</h3><p>Informe peso, repetições, parciais e marque as séries válidas.</p></li>
+        <ol class="flow-track" data-flow-track>
+            <li class="flow-step" data-flow-step>
+                <span class="flow-step__rule" data-flow-rule aria-hidden="true"></span>
+                <span class="flow-step__number">01</span>
+                <div class="flow-step__copy"><p class="landing-label">Calendário</p><h3>Escolha o dia.</h3><p>Hoje, ontem ou quando precisar. Abrir uma data não cria registros vazios.</p></div>
+                <div class="flow-step__output"><span>SEX</span><strong>14</strong><small>AGO · 2026</small></div>
+            </li>
+            <li class="flow-step" data-flow-step>
+                <span class="flow-step__rule" data-flow-rule aria-hidden="true"></span>
+                <span class="flow-step__number">02</span>
+                <div class="flow-step__copy"><p class="landing-label">Estrutura</p><h3>Monte do seu jeito.</h3><p>Adicione os grupos do dia e encontre os exercícios no catálogo.</p></div>
+                <div class="flow-step__output flow-step__output--wide"><span>QUADRÍCEPS</span><strong>Agachamento livre</strong><small>+ Cadeira extensora</small></div>
+            </li>
+            <li class="flow-step" data-flow-step>
+                <span class="flow-step__rule" data-flow-rule aria-hidden="true"></span>
+                <span class="flow-step__number">03</span>
+                <div class="flow-step__copy"><p class="landing-label">Registro</p><h3>Salve o que aconteceu.</h3><p>Peso, repetições, parciais e a diferença entre aquecimento e série válida.</p></div>
+                <div class="flow-step__output flow-step__output--accent"><span>SÉRIE VÁLIDA</span><strong>60 kg · 4</strong><small><i class="material-symbols-outlined">check</i> salvo</small></div>
+            </li>
         </ol>
     </div>
 </section>
 
-<section class="landing-cta">
+<section class="landing-cta" data-section-reveal>
+    <span class="landing-section__transition" data-section-transition aria-hidden="true"></span>
     <div class="landing-cta__glow" aria-hidden="true"></div>
     <div class="landing-container landing-cta__content">
         <p class="landing-kicker"><span></span> Seu próximo treino</p>
@@ -213,5 +233,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
     <script src="{% static 'core/js/landing.js' %}" defer></script>
 {% endblock %}

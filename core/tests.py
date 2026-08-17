@@ -26,6 +26,10 @@ class LandingPageTests(TestCase):
         self.assertContains(response, "Seu treino.")
         self.assertContains(response, "data-parallax-speed")
         self.assertContains(response, "core/js/landing.js")
+        self.assertContains(response, "gsap@3.13.0")
+        self.assertContains(response, "data-section-reveal")
+        self.assertContains(response, "Uma sequência natural para o seu treino.")
+        self.assertNotContains(response, "Fluxo direto")
         self.assertContains(response, reverse("accounts:register"))
 
     def test_authenticated_landing_links_to_calendar_without_bottom_nav(self):
