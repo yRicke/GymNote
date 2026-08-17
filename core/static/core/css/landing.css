@@ -15,8 +15,8 @@ html:has(.landing-page) {
 }
 
 .landing-page .logo-mark {
-    width: 30px;
-    height: 30px;
+    width: 48px;
+    height: 32px;
 }
 
 .landing-container {
@@ -700,7 +700,7 @@ html:has(.landing-page) {
 
 @media (max-width: 390px) {
     .landing-brand { font-size: .92rem; }
-    .landing-header .logo-mark { width: 26px; height: 26px; }
+    .landing-header .logo-mark { width: 42px; height: 28px; }
     .landing-button--compact { font-size: .74rem; }
     .landing-hero h1 { font-size: 3rem; }
     .landing-hero__meta { font-size: .56rem; }
