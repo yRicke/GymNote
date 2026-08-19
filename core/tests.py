@@ -1028,6 +1028,36 @@ class SeedGymDataTests(TestCase):
         self.assertEqual(cardio.tracking_type, MuscleGroup.TrackingType.CARDIO)
         self.assertEqual(cardio.exercises.count(), 8)
 
+    def test_seeded_groups_have_corresponding_icons(self):
+        call_command("seed_gym_data")
+
+        expected_icons = {
+            "peito": "rib_cage",
+            "costas": "rowing",
+            "ombros": "sports_handball",
+            "biceps": "fitness_center",
+            "triceps": "exercise",
+            "quadriceps": "femur",
+            "posterior-de-coxa": "femur_alt",
+            "gluteos": "skeleton",
+            "panturrilhas": "footprint",
+            "abdomen": "body_system",
+            "cardio": "directions_run",
+        }
+
+        self.assertEqual(
+            {
+                group.slug: group.icon_name
+                for group in MuscleGroup.objects.order_by("order")
+            },
+            expected_icons,
+        )
+
+    def test_unknown_strength_group_uses_fallback_icon(self):
+        group = MuscleGroup(name="Antebraços", slug="antebracos")
+
+        self.assertEqual(group.icon_name, "fitness_center")
+
 
 class TrainingEnhancementTests(TestCase):
     workout_date = date(2026, 8, 19)

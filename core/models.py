@@ -4,9 +4,23 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils.text import slugify
 
 
 class MuscleGroup(models.Model):
+    ICON_BY_SLUG = {
+        "peito": "rib_cage",
+        "costas": "rowing",
+        "ombros": "sports_handball",
+        "biceps": "fitness_center",
+        "triceps": "exercise",
+        "quadriceps": "femur",
+        "posterior-de-coxa": "femur_alt",
+        "gluteos": "skeleton",
+        "panturrilhas": "footprint",
+        "abdomen": "body_system",
+    }
+
     class TrackingType(models.TextChoices):
         STRENGTH = "strength", "Força"
         CARDIO = "cardio", "Cardio"
@@ -30,6 +44,16 @@ class MuscleGroup(models.Model):
     @property
     def is_cardio(self):
         return self.tracking_type == self.TrackingType.CARDIO
+
+    @property
+    def icon_name(self):
+        if self.is_cardio:
+            return "directions_run"
+
+        return self.ICON_BY_SLUG.get(
+            self.slug,
+            self.ICON_BY_SLUG.get(slugify(self.name), "fitness_center"),
+        )
 
 
 class Exercise(models.Model):
