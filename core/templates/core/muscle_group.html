@@ -54,28 +54,26 @@
         {% endif %}
     </section>
 
-    <section class="content-section panel">
+    <section class="content-section panel exercise-search-region" data-exercise-search-region>
         <div class="section-heading">
             <div><p class="eyebrow eyebrow--accent">Catálogo</p><h2>Adicionar exercícios</h2></div>
-            <span class="pill">{{ exercise_form.fields.exercises.queryset|length }} {% if exercise_form.fields.exercises.queryset|length == 1 %}disponível{% else %}disponíveis{% endif %}</span>
+            <span class="pill" data-search-count>{{ exercise_count }} {% if exercise_count == 1 %}disponível{% else %}disponíveis{% endif %}</span>
         </div>
-        <form class="search-form" method="get" role="search" data-auto-search>
+        <form class="search-form" method="get" action="{% url 'core:muscle_group' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" role="search" data-live-search>
             <label class="sr-only" for="id_q">Pesquisar exercício</label>
             <span class="material-symbols-outlined" aria-hidden="true">search</span>
             <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Buscar exercício...">
-            {% if query %}<a href="{% url 'core:muscle_group' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" aria-label="Limpar busca"><span class="material-symbols-outlined">close</span></a>{% endif %}
-            <span class="search-form__status sr-only" aria-live="polite">A busca é atualizada enquanto você digita.</span>
+            <a href="{% url 'core:muscle_group' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" data-search-clear {% if not query %}hidden{% endif %} aria-label="Limpar busca"><span class="material-symbols-outlined">close</span></a>
         </form>
-        {% if exercise_form.fields.exercises.queryset %}
-            <form method="post" action="{% url 'core:add_exercises' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" class="selection-form">
-                {% csrf_token %}
-                <div class="choice-list choice-list--exercises">{{ exercise_form.exercises }}</div>
-                {% for error in exercise_form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
-            </form>
-        {% else %}
-            <p class="muted">Nenhum exercício disponível para a busca atual.</p>
-        {% endif %}
+        <p class="search-form__status sr-only" data-search-status aria-live="polite">A busca é atualizada enquanto você digita.</p>
+        <form method="post" action="{% url 'core:add_exercises' date_str=workout_group.workout.date|date:'Y-m-d' pk=workout_group.pk %}" class="selection-form" data-exercise-selection-form>
+            {% csrf_token %}
+            <div class="exercise-results" data-exercise-results>
+                {% include "core/includes/exercise_catalog_results.html" %}
+            </div>
+            <div data-preserved-selections></div>
+            <button class="button button--primary button--full" type="submit" data-exercise-submit><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
+        </form>
     </section>
 </div>
 {% endblock %}

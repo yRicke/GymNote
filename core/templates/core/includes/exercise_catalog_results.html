@@ -1,0 +1,6 @@
+{% if exercise_form.fields.exercises.queryset %}
+    <div class="choice-list choice-list--exercises">{{ exercise_form.exercises }}</div>
+    {% for error in exercise_form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+{% else %}
+    <p class="muted">Nenhum exercício disponível para a busca atual.</p>
+{% endif %}

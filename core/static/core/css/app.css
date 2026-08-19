@@ -450,6 +450,13 @@ a.list-card:focus-visible,
 
 .search-form input { width: 100%; min-width: 0; padding: 12px 0; border: 0; outline: 0; background: transparent; color: var(--text); }
 .search-form input::placeholder { color: var(--text-muted); }
+.exercise-results { min-height: 52px; transition: opacity .15s ease; }
+.exercise-search-region.is-loading .exercise-results { opacity: .55; }
+.exercise-search-region.is-loading .search-form > .material-symbols-outlined { animation: search-pulse .8s ease-in-out infinite alternate; }
+
+@keyframes search-pulse {
+    to { color: var(--accent); transform: scale(1.08); }
+}
 
 .metrics-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
 .metric-tile { display: grid; min-height: 88px; padding: 14px 16px; align-content: space-between; border: 1px solid rgba(255,255,255,.035); border-radius: var(--radius-md); background: var(--surface-low); }
