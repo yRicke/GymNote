@@ -1074,9 +1074,31 @@ class TrainingEnhancementTests(TestCase):
         )
         workout_response = self.client.get(reverse("core:workouts"))
 
-        self.assertContains(group_response, "data-auto-search")
+        self.assertContains(group_response, "data-live-search")
+        self.assertContains(group_response, "data-exercise-results")
         self.assertContains(workout_response, "data-auto-filter")
         self.assertContains(group_response, "core/js/app.js")
+
+    def test_incremental_exercise_search_returns_only_result_fragment(self):
+        workout_group = self.create_workout_group()
+        group_url = reverse(
+            "core:muscle_group",
+            kwargs={"date_str": self.workout_date.isoformat(), "pk": workout_group.pk},
+        )
+
+        response = self.client.get(
+            group_url,
+            {"q": "Leg"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["query"], "Leg")
+        self.assertIn("Leg Press", response.json()["html"])
+        self.assertNotIn("<html", response.json()["html"])
+        self.assertNotContains(response, "Seu treino")
 
     def test_custom_exercises_are_grouped_by_category(self):
         custom_strength = Exercise.objects.create(

@@ -1,20 +1,137 @@
 (() => {
     const debounce = (callback, wait = 300) => {
         let timeout;
-        return (...args) => {
+        const debounced = (...args) => {
             window.clearTimeout(timeout);
             timeout = window.setTimeout(() => callback(...args), wait);
         };
+        debounced.cancel = () => window.clearTimeout(timeout);
+        return debounced;
     };
 
-    const autoSearchForm = document.querySelector("[data-auto-search]");
-    if (autoSearchForm) {
-        const searchInput = autoSearchForm.querySelector('input[type="search"]');
-        const submitSearch = debounce(() => {
-            autoSearchForm.setAttribute("aria-busy", "true");
-            autoSearchForm.requestSubmit();
+    const searchRegion = document.querySelector("[data-exercise-search-region]");
+    if (searchRegion) {
+        const searchForm = searchRegion.querySelector("[data-live-search]");
+        const searchInput = searchForm.querySelector('input[type="search"]');
+        const clearSearch = searchForm.querySelector("[data-search-clear]");
+        const resultsContainer = searchRegion.querySelector("[data-exercise-results]");
+        const countBadge = searchRegion.querySelector("[data-search-count]");
+        const status = searchRegion.querySelector("[data-search-status]");
+        const selectionForm = searchRegion.querySelector("[data-exercise-selection-form]");
+        const preservedSelections = selectionForm.querySelector("[data-preserved-selections]");
+        const selectionSubmit = selectionForm.querySelector("[data-exercise-submit]");
+        const selectedExerciseIds = new Set(
+            [...resultsContainer.querySelectorAll('input[name="exercises"]:checked')].map(
+                (input) => input.value,
+            ),
+        );
+        let activeRequest = null;
+        let requestSequence = 0;
+
+        const updateSelectionButton = () => {
+            selectionSubmit.disabled = selectedExerciseIds.size === 0;
+            selectionSubmit.setAttribute(
+                "aria-label",
+                selectedExerciseIds.size
+                    ? `Adicionar ${selectedExerciseIds.size} exercício${selectedExerciseIds.size === 1 ? "" : "s"} selecionado${selectedExerciseIds.size === 1 ? "" : "s"}`
+                    : "Selecione ao menos um exercício",
+            );
+        };
+        const restoreSelections = () => {
+            resultsContainer
+                .querySelectorAll('input[name="exercises"]')
+                .forEach((input) => {
+                    input.checked = selectedExerciseIds.has(input.value);
+                });
+            updateSelectionButton();
+        };
+        const updateAddress = (query) => {
+            const address = new URL(searchForm.action, window.location.origin);
+            if (query) address.searchParams.set("q", query);
+            window.history.replaceState({}, "", `${address.pathname}${address.search}`);
+        };
+        const performSearch = async () => {
+            const query = searchInput.value.trim();
+            const requestId = ++requestSequence;
+            activeRequest?.abort();
+            activeRequest = new AbortController();
+            const requestUrl = new URL(searchForm.action, window.location.origin);
+            if (query) requestUrl.searchParams.set("q", query);
+
+            searchRegion.classList.add("is-loading");
+            searchRegion.setAttribute("aria-busy", "true");
+            status.textContent = "Buscando exercícios…";
+            try {
+                const response = await fetch(requestUrl, {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    signal: activeRequest.signal,
+                });
+                if (!response.ok) throw new Error("Não foi possível atualizar a busca.");
+                const data = await response.json();
+                if (requestId !== requestSequence) return;
+
+                resultsContainer.innerHTML = data.html;
+                restoreSelections();
+                countBadge.textContent = `${data.count} ${data.count === 1 ? "disponível" : "disponíveis"}`;
+                clearSearch.hidden = !data.query;
+                updateAddress(data.query);
+                status.textContent = `${data.count} exercício${data.count === 1 ? "" : "s"} encontrado${data.count === 1 ? "" : "s"}.`;
+            } catch (error) {
+                if (error.name !== "AbortError") status.textContent = error.message;
+            } finally {
+                if (requestId === requestSequence) {
+                    searchRegion.classList.remove("is-loading");
+                    searchRegion.removeAttribute("aria-busy");
+                }
+            }
+        };
+        const scheduleSearch = debounce(performSearch, 250);
+
+        searchInput.addEventListener("input", scheduleSearch);
+        searchForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            scheduleSearch.cancel();
+            performSearch();
         });
-        searchInput?.addEventListener("input", submitSearch);
+        clearSearch.addEventListener("click", (event) => {
+            event.preventDefault();
+            scheduleSearch.cancel();
+            searchInput.value = "";
+            searchInput.focus();
+            performSearch();
+        });
+        selectionForm.addEventListener("change", (event) => {
+            if (!event.target.matches('input[name="exercises"]')) return;
+            if (event.target.checked) selectedExerciseIds.add(event.target.value);
+            else selectedExerciseIds.delete(event.target.value);
+            updateSelectionButton();
+        });
+        selectionForm.addEventListener("submit", (event) => {
+            if (!selectedExerciseIds.size) {
+                event.preventDefault();
+                status.textContent = "Selecione ao menos um exercício.";
+                return;
+            }
+            preservedSelections.replaceChildren();
+            const visibleIds = new Set(
+                [...resultsContainer.querySelectorAll('input[name="exercises"]')].map(
+                    (input) => input.value,
+                ),
+            );
+            selectedExerciseIds.forEach((exerciseId) => {
+                if (visibleIds.has(exerciseId)) return;
+                const hiddenInput = document.createElement("input");
+                hiddenInput.type = "hidden";
+                hiddenInput.name = "exercises";
+                hiddenInput.value = exerciseId;
+                preservedSelections.append(hiddenInput);
+            });
+        });
+        updateSelectionButton();
     }
 
     const autoFilterForm = document.querySelector("[data-auto-filter]");
