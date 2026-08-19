@@ -1032,17 +1032,17 @@ class SeedGymDataTests(TestCase):
         call_command("seed_gym_data")
 
         expected_icons = {
-            "peito": "rib_cage",
-            "costas": "rowing",
-            "ombros": "sports_handball",
-            "biceps": "fitness_center",
-            "triceps": "exercise",
-            "quadriceps": "femur",
-            "posterior-de-coxa": "femur_alt",
-            "gluteos": "skeleton",
-            "panturrilhas": "footprint",
-            "abdomen": "body_system",
-            "cardio": "directions_run",
+            "peito": "peito",
+            "costas": "costas",
+            "ombros": "ombros",
+            "biceps": "biceps",
+            "triceps": "triceps",
+            "quadriceps": "quadriceps",
+            "posterior-de-coxa": "posterior",
+            "gluteos": "gluteos",
+            "panturrilhas": "panturrilhas",
+            "abdomen": "abdomen",
+            "cardio": "cardio",
         }
 
         self.assertEqual(
@@ -1056,7 +1056,7 @@ class SeedGymDataTests(TestCase):
     def test_unknown_strength_group_uses_fallback_icon(self):
         group = MuscleGroup(name="Antebraços", slug="antebracos")
 
-        self.assertEqual(group.icon_name, "fitness_center")
+        self.assertEqual(group.icon_name, "forca")
 
 
 class TrainingEnhancementTests(TestCase):
@@ -1149,6 +1149,8 @@ class TrainingEnhancementTests(TestCase):
         self.assertContains(response, "Extensora unilateral")
         self.assertContains(response, "Corrida inclinada")
         self.assertContains(response, 'class="exercise-groups"')
+        self.assertContains(response, "muscle-groups.svg#quadriceps")
+        self.assertContains(response, "muscle-groups.svg#cardio")
 
     def test_cardio_uses_duration_distance_and_perceived_exertion(self):
         workout_group = self.create_workout_group(group=self.cardio_group)
