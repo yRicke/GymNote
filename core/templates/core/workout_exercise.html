@@ -4,7 +4,7 @@
 {% block header_leading %}
     <div class="app-header__leading">
         <a class="icon-button" href="{% url 'core:muscle_group' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.workout_muscle_group.pk %}" aria-label="Voltar ao grupo muscular"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
-        <span class="brand">{% include "includes/logo_mark.html" %}<span>Registrar séries</span></span>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>{% if is_cardio %}Registrar cardio{% else %}Registrar séries{% endif %}</span></span>
     </div>
 {% endblock %}
 
@@ -14,29 +14,44 @@
         <p class="eyebrow">{{ workout_exercise.workout_muscle_group.muscle_group.name }} · {{ workout_exercise.workout_muscle_group.workout.date|date:"d/m" }}</p>
         <h1>{{ workout_exercise.exercise.name }}</h1>
         <div class="metrics-row">
-            <div class="metric-tile"><span>Séries</span><strong>{{ exercise_sets|length }}</strong></div>
-            <div class="metric-tile metric-tile--accent"><span>Válidas</span><strong>{{ working_set_count }}</strong></div>
+            {% if is_cardio %}
+                <div class="metric-tile"><span>Registros</span><strong>{{ exercise_sets|length }}</strong></div>
+                <div class="metric-tile metric-tile--accent"><span>Minutos</span><strong>{{ total_duration_minutes }}</strong></div>
+            {% else %}
+                <div class="metric-tile"><span>Séries</span><strong>{{ exercise_sets|length }}</strong></div>
+                <div class="metric-tile metric-tile--accent"><span>Válidas</span><strong>{{ working_set_count }}</strong></div>
+            {% endif %}
         </div>
-        <span class="sr-only">Séries válidas: {{ working_set_count }}</span>
+        {% if is_cardio %}<span class="sr-only">Duração total: {{ total_duration_minutes }} minutos</span>{% else %}<span class="sr-only">Séries válidas: {{ working_set_count }}</span>{% endif %}
     </section>
 
     <section class="content-section">
-        <div class="section-heading"><h2>Séries registradas</h2><span class="pill">ordem de execução</span></div>
+        <div class="section-heading"><h2>{% if is_cardio %}Registros de cardio{% else %}Séries registradas{% endif %}</h2><span class="pill">ordem de execução</span></div>
         {% if exercise_sets %}
             <div class="sets-table-wrap">
-                <table class="sets-table">
-                    <thead><tr><th>Série</th><th>kg</th><th>Reps</th><th>Parciais</th><th>Válida</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                <table class="sets-table {% if is_cardio %}sets-table--cardio{% endif %}">
+                    {% if is_cardio %}
+                        <thead><tr><th>Registro</th><th>Min</th><th>km</th><th>Esforço</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                    {% else %}
+                        <thead><tr><th>Série</th><th>kg</th><th>Reps</th><th>Parciais</th><th>Válida</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                    {% endif %}
                     <tbody>
                         {% for exercise_set in exercise_sets %}
-                            <tr class="{% if exercise_set.is_working_set %}is-working{% endif %}">
-                                <td data-label="Série"><span class="set-number">{{ exercise_set.order }}</span></td>
-                                <td data-label="Peso"><strong>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg|floatformat:"-2" }}{% else %}—{% endif %}</strong></td>
-                                <td data-label="Reps"><strong>{{ exercise_set.reps|default_if_none:"—" }}</strong></td>
-                                <td data-label="Parciais">{{ exercise_set.partial_reps|default_if_none:"—" }}</td>
-                                <td data-label="Válida"><span class="working-mark {% if exercise_set.is_working_set %}is-active{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">check</span><span class="sr-only">{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</span></span></td>
+                            <tr class="{% if not is_cardio and exercise_set.is_working_set %}is-working{% endif %}">
+                                <td data-label="{% if is_cardio %}Registro{% else %}Série{% endif %}"><span class="set-number">{{ exercise_set.order }}</span></td>
+                                {% if is_cardio %}
+                                    <td data-label="Duração"><strong>{{ exercise_set.duration_minutes }} min</strong></td>
+                                    <td data-label="Distância"><strong>{% if exercise_set.distance_km is not None %}{{ exercise_set.distance_km|floatformat:"-2" }}{% else %}—{% endif %}</strong></td>
+                                    <td data-label="Esforço">{% if exercise_set.perceived_exertion %}{{ exercise_set.perceived_exertion }}/10{% else %}—{% endif %}</td>
+                                {% else %}
+                                    <td data-label="Peso"><strong>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg|floatformat:"-2" }}{% else %}—{% endif %}</strong></td>
+                                    <td data-label="Reps"><strong>{{ exercise_set.reps|default_if_none:"—" }}</strong></td>
+                                    <td data-label="Parciais">{{ exercise_set.partial_reps|default_if_none:"—" }}</td>
+                                    <td data-label="Válida"><span class="working-mark {% if exercise_set.is_working_set %}is-active{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">check</span><span class="sr-only">{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</span></span></td>
+                                {% endif %}
                                 <td class="set-actions">
-                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar série {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
-                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir série {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
+                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
+                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -44,25 +59,34 @@
                 </table>
             </div>
         {% else %}
-            <div class="empty-state empty-state--compact"><span class="material-symbols-outlined" aria-hidden="true">data_table</span><p>Registre a primeira série deste exercício.</p></div>
+            <div class="empty-state empty-state--compact"><span class="material-symbols-outlined" aria-hidden="true">data_table</span><p>{% if is_cardio %}Registre a primeira atividade deste exercício.{% else %}Registre a primeira série deste exercício.{% endif %}</p></div>
         {% endif %}
     </section>
 
     <section class="content-section panel set-entry">
-        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Próxima série</p><h2>Adicionar série</h2></div><span class="material-symbols-outlined" aria-hidden="true">add_circle</span></div>
+        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}</p><h2>Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</h2></div><span class="material-symbols-outlined" aria-hidden="true">add_circle</span></div>
         <form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" class="app-form">
             {% csrf_token %}
             {{ set_form.non_field_errors }}
-            <div class="form-grid form-grid--three">
-                <div class="field"><label for="{{ set_form.weight_kg.id_for_label }}">{{ set_form.weight_kg.label }}</label>{{ set_form.weight_kg }}{% for error in set_form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                <div class="field"><label for="{{ set_form.reps.id_for_label }}">{{ set_form.reps.label }}</label>{{ set_form.reps }}{% for error in set_form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                <div class="field"><label for="{{ set_form.partial_reps.id_for_label }}">Parciais</label>{{ set_form.partial_reps }}{% for error in set_form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-            </div>
-            <label class="toggle-field" for="{{ set_form.is_working_set.id_for_label }}">
-                <span><strong>Série válida</strong><small>Marque apenas séries de trabalho.</small></span>
-                {{ set_form.is_working_set }}<span class="toggle" aria-hidden="true"></span>
-            </label>
-            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar série</button>
+            {% if is_cardio %}
+                <div class="form-grid form-grid--three">
+                    <div class="field"><label for="{{ set_form.duration_minutes.id_for_label }}">{{ set_form.duration_minutes.label }}</label>{{ set_form.duration_minutes }}{% for error in set_form.duration_minutes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                    <div class="field"><label for="{{ set_form.distance_km.id_for_label }}">{{ set_form.distance_km.label }}</label>{{ set_form.distance_km }}{% for error in set_form.distance_km.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                    <div class="field"><label for="{{ set_form.perceived_exertion.id_for_label }}">{{ set_form.perceived_exertion.label }}</label>{{ set_form.perceived_exertion }}{% for error in set_form.perceived_exertion.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                </div>
+                <p class="help-text">Distância e esforço são opcionais; a duração é o único campo obrigatório.</p>
+            {% else %}
+                <div class="form-grid form-grid--three">
+                    <div class="field"><label for="{{ set_form.weight_kg.id_for_label }}">{{ set_form.weight_kg.label }}</label>{{ set_form.weight_kg }}{% for error in set_form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                    <div class="field"><label for="{{ set_form.reps.id_for_label }}">{{ set_form.reps.label }}</label>{{ set_form.reps }}{% for error in set_form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                    <div class="field"><label for="{{ set_form.partial_reps.id_for_label }}">Parciais</label>{{ set_form.partial_reps }}{% for error in set_form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+                </div>
+                <label class="toggle-field" for="{{ set_form.is_working_set.id_for_label }}">
+                    <span><strong>Série válida</strong><small>Marque apenas séries de trabalho.</small></span>
+                    {{ set_form.is_working_set }}<span class="toggle" aria-hidden="true"></span>
+                </label>
+            {% endif %}
+            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</button>
         </form>
     </section>
 </div>

@@ -1,3 +1,4 @@
+import json
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -1010,7 +1011,7 @@ class SeedGymDataTests(TestCase):
             for exercise_names in CATALOG.values()
             for exercise_name in exercise_names
         }
-        self.assertEqual(MuscleGroup.objects.count(), 10)
+        self.assertEqual(MuscleGroup.objects.count(), 11)
         self.assertEqual(Exercise.objects.count(), len(expected_exercises))
         self.assertEqual(Exercise.objects.filter(name="Agachamento Livre").count(), 1)
         self.assertEqual(
@@ -1022,6 +1023,257 @@ class SeedGymDataTests(TestCase):
         self.assertEqual(
             Exercise.objects.get(name="Supino Fechado").muscle_groups.count(),
             2,
+        )
+        cardio = MuscleGroup.objects.get(slug="cardio")
+        self.assertEqual(cardio.tracking_type, MuscleGroup.TrackingType.CARDIO)
+        self.assertEqual(cardio.exercises.count(), 8)
+
+
+class TrainingEnhancementTests(TestCase):
+    workout_date = date(2026, 8, 19)
+
+    def setUp(self):
+        self.user = User.objects.create_user("athlete", password="senha-teste-123")
+        self.other_user = User.objects.create_user(
+            "other-athlete",
+            password="senha-teste-123",
+        )
+        self.strength_group = MuscleGroup.objects.create(
+            name="Quadríceps",
+            slug="quadriceps-enhancements",
+            order=1,
+        )
+        self.cardio_group = MuscleGroup.objects.get(slug="cardio")
+        self.exercises = []
+        for name in ("Agachamento", "Leg Press", "Cadeira Extensora"):
+            exercise = Exercise.objects.create(name=name)
+            exercise.muscle_groups.add(self.strength_group)
+            self.exercises.append(exercise)
+        self.cardio_exercise = Exercise.objects.get(name="Corrida", user=None)
+        self.client.force_login(self.user)
+
+    def create_workout_group(self, group=None, user=None):
+        workout = Workout.objects.create(
+            user=user or self.user,
+            date=self.workout_date,
+        )
+        return WorkoutMuscleGroup.objects.create(
+            workout=workout,
+            muscle_group=group or self.strength_group,
+            order=1,
+        )
+
+    def test_search_and_workout_filters_are_automatic(self):
+        workout_group = self.create_workout_group()
+
+        group_response = self.client.get(
+            reverse(
+                "core:muscle_group",
+                kwargs={"date_str": self.workout_date.isoformat(), "pk": workout_group.pk},
+            )
+        )
+        workout_response = self.client.get(reverse("core:workouts"))
+
+        self.assertContains(group_response, "data-auto-search")
+        self.assertContains(workout_response, "data-auto-filter")
+        self.assertContains(group_response, "core/js/app.js")
+
+    def test_custom_exercises_are_grouped_by_category(self):
+        custom_strength = Exercise.objects.create(
+            user=self.user,
+            name="Extensora unilateral",
+        )
+        custom_strength.muscle_groups.add(self.strength_group)
+        custom_cardio = Exercise.objects.create(
+            user=self.user,
+            name="Corrida inclinada",
+        )
+        custom_cardio.muscle_groups.add(self.cardio_group)
+
+        response = self.client.get(reverse("core:personalization"))
+
+        groups = list(response.context["exercise_groups"])
+        self.assertEqual(groups, [self.strength_group, self.cardio_group])
+        self.assertContains(response, "Extensora unilateral")
+        self.assertContains(response, "Corrida inclinada")
+        self.assertContains(response, 'class="exercise-groups"')
+
+    def test_cardio_uses_duration_distance_and_perceived_exertion(self):
+        workout_group = self.create_workout_group(group=self.cardio_group)
+        workout_exercise = WorkoutExercise.objects.create(
+            workout_muscle_group=workout_group,
+            exercise=self.cardio_exercise,
+            order=1,
+        )
+
+        response = self.client.post(
+            reverse(
+                "core:add_set",
+                kwargs={
+                    "date_str": self.workout_date.isoformat(),
+                    "pk": workout_exercise.pk,
+                },
+            ),
+            {
+                "duration_minutes": "35",
+                "distance_km": "5.20",
+                "perceived_exertion": "7",
+                "weight_kg": "80",
+                "reps": "10",
+                "is_working_set": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        exercise_set = ExerciseSet.objects.get(workout_exercise=workout_exercise)
+        self.assertEqual(exercise_set.duration_minutes, 35)
+        self.assertEqual(str(exercise_set.distance_km), "5.20")
+        self.assertEqual(exercise_set.perceived_exertion, 7)
+        self.assertIsNone(exercise_set.weight_kg)
+        self.assertIsNone(exercise_set.reps)
+        self.assertFalse(exercise_set.is_working_set)
+
+        detail = self.client.get(
+            reverse(
+                "core:workout_exercise",
+                kwargs={
+                    "date_str": self.workout_date.isoformat(),
+                    "pk": workout_exercise.pk,
+                },
+            )
+        )
+        self.assertContains(detail, "Duração em minutos")
+        self.assertContains(detail, "35 min")
+        self.assertContains(detail, "5,2")
+        self.assertNotContains(detail, "Peso em kg")
+
+    def test_cardio_duration_is_summarized_on_workout_day(self):
+        workout_group = self.create_workout_group(group=self.cardio_group)
+        workout_exercise = WorkoutExercise.objects.create(
+            workout_muscle_group=workout_group,
+            exercise=self.cardio_exercise,
+            order=1,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=workout_exercise,
+            order=1,
+            duration_minutes=20,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=workout_exercise,
+            order=2,
+            duration_minutes=15,
+        )
+
+        response = self.client.get(
+            reverse(
+                "core:workout_day",
+                kwargs={"date_str": self.workout_date.isoformat()},
+            )
+        )
+
+        self.assertContains(response, "35 min registrados")
+
+    def test_user_can_reorder_all_exercises_in_a_group(self):
+        workout_group = self.create_workout_group()
+        entries = [
+            WorkoutExercise.objects.create(
+                workout_muscle_group=workout_group,
+                exercise=exercise,
+                order=order,
+            )
+            for order, exercise in enumerate(self.exercises, start=1)
+        ]
+        reorder_url = reverse(
+            "core:reorder_exercises",
+            kwargs={"date_str": self.workout_date.isoformat(), "pk": workout_group.pk},
+        )
+
+        response = self.client.post(
+            reorder_url,
+            data=json.dumps({"order": [entries[2].pk, entries[0].pk, entries[1].pk]}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(
+                workout_group.workout_exercises.order_by("order").values_list(
+                    "pk",
+                    flat=True,
+                )
+            ),
+            [entries[2].pk, entries[0].pk, entries[1].pk],
+        )
+
+    def test_reorder_rejects_incomplete_or_foreign_group(self):
+        workout_group = self.create_workout_group()
+        entry = WorkoutExercise.objects.create(
+            workout_muscle_group=workout_group,
+            exercise=self.exercises[0],
+            order=1,
+        )
+        reorder_url = reverse(
+            "core:reorder_exercises",
+            kwargs={"date_str": self.workout_date.isoformat(), "pk": workout_group.pk},
+        )
+
+        invalid = self.client.post(
+            reorder_url,
+            data=json.dumps({"order": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+        self.client.force_login(self.other_user)
+        foreign = self.client.post(
+            reorder_url,
+            data=json.dumps({"order": [entry.pk]}),
+            content_type="application/json",
+        )
+        self.assertEqual(foreign.status_code, 404)
+
+    def test_group_page_can_prefill_and_save_workout_preset(self):
+        workout_group = self.create_workout_group()
+        entries = [
+            WorkoutExercise.objects.create(
+                workout_muscle_group=workout_group,
+                exercise=exercise,
+                order=order,
+            )
+            for order, exercise in enumerate(self.exercises[:2], start=1)
+        ]
+        group_url = reverse(
+            "core:muscle_group",
+            kwargs={"date_str": self.workout_date.isoformat(), "pk": workout_group.pk},
+        )
+
+        group_response = self.client.get(group_url)
+        preset_url = group_response.context["save_preset_url"]
+        self.assertContains(group_response, "Salvar Predefinição de Treino")
+
+        preset_form = self.client.get(preset_url)
+        initial_ids = set(preset_form.context["form"]["exercises"].value())
+        self.assertEqual(
+            initial_ids,
+            {entries[0].exercise_id, entries[1].exercise_id},
+        )
+
+        save_response = self.client.post(
+            reverse("core:personalization_preset_create"),
+            {
+                "muscle_group": self.strength_group.pk,
+                "name": "Treino do dia",
+                "exercises": [entry.exercise_id for entry in entries],
+                "return_to": group_url,
+            },
+        )
+
+        self.assertRedirects(save_response, group_url)
+        preset = WorkoutPreset.objects.get(user=self.user, name="Treino do dia")
+        self.assertEqual(
+            set(preset.exercises.values_list("pk", flat=True)),
+            {entry.exercise_id for entry in entries},
         )
 
 

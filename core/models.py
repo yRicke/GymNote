@@ -1,22 +1,35 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
 
 class MuscleGroup(models.Model):
+    class TrackingType(models.TextChoices):
+        STRENGTH = "strength", "Força"
+        CARDIO = "cardio", "Cardio"
+
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    tracking_type = models.CharField(
+        max_length=10,
+        choices=TrackingType.choices,
+        default=TrackingType.STRENGTH,
+    )
 
     class Meta:
         ordering = ["order", "name"]
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_cardio(self):
+        return self.tracking_type == self.TrackingType.CARDIO
 
 
 class Exercise(models.Model):
@@ -233,6 +246,23 @@ class ExerciseSet(models.Model):
     )
     reps = models.PositiveIntegerField(null=True, blank=True)
     partial_reps = models.PositiveIntegerField(null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    distance_km = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
+    perceived_exertion = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+    )
     is_working_set = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

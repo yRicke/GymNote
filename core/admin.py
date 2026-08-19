@@ -14,8 +14,8 @@ from .models import (
 
 @admin.register(MuscleGroup)
 class MuscleGroupAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "order", "is_active")
-    list_editable = ("order", "is_active")
+    list_display = ("name", "slug", "tracking_type", "order", "is_active")
+    list_editable = ("tracking_type", "order", "is_active")
     search_fields = ("name",)
     prepopulated_fields = {"slug": ("name",)}
 
@@ -73,6 +73,9 @@ class ExerciseSetAdmin(admin.ModelAdmin):
         "weight_kg",
         "reps",
         "partial_reps",
+        "duration_minutes",
+        "distance_km",
+        "perceived_exertion",
         "is_working_set",
     )
     list_filter = ("is_working_set",)

@@ -1,14 +1,17 @@
 import calendar
+import json
 from datetime import date
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Max, Q
-from django.http import Http404
+from django.db.models import Count, F, Max, Prefetch, Q, Sum
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -40,6 +43,17 @@ def _parse_date(date_str):
 
 def _next_order(queryset):
     return (queryset.aggregate(max_order=Max("order"))["max_order"] or 0) + 1
+
+
+def _safe_return_url(request):
+    return_url = request.POST.get("return_to") or request.GET.get("return_to")
+    if return_url and url_has_allowed_host_and_scheme(
+        return_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return return_url
+    return None
 
 
 def _owned_workout_muscle_group(user, date_str, pk):
@@ -220,11 +234,27 @@ def personalization(request):
         .prefetch_related("muscle_groups")
         .order_by("name")
     )
+    exercise_groups = (
+        MuscleGroup.objects.filter(
+            exercises__user=request.user,
+            exercises__is_active=True,
+        )
+        .distinct()
+        .prefetch_related(
+            Prefetch(
+                "exercises",
+                queryset=custom_exercises,
+                to_attr="custom_exercises",
+            )
+        )
+        .order_by("order", "name")
+    )
     return render(
         request,
         "core/personalization_exercises.html",
         {
             "custom_exercises": custom_exercises,
+            "exercise_groups": exercise_groups,
             "active_personalization_tab": "exercises",
         },
     )
@@ -350,15 +380,19 @@ def _preset_group_form(request, preset=None):
 def workout_preset_create(request):
     group_form, selected_group = _preset_group_form(request)
     form = None
+    return_url = _safe_return_url(request)
     if selected_group:
         form = WorkoutPresetForm(
             request.POST or None,
             user=request.user,
             muscle_group=selected_group,
+            initial_exercise_ids=request.GET.getlist("exercises"),
         )
         if request.method == "POST" and form.is_valid():
             form.save()
             messages.success(request, "Predefinição de treino criada.")
+            if return_url:
+                return redirect(return_url)
             return redirect("core:personalization_presets")
     return render(
         request,
@@ -368,6 +402,7 @@ def workout_preset_create(request):
             "group_form": group_form,
             "selected_group": selected_group,
             "page_title": "Nova predefinição",
+            "return_url": return_url,
         },
     )
 
@@ -445,6 +480,10 @@ def workout_day(request, date_str):
                 "workout_exercises__sets",
                 filter=Q(workout_exercises__sets__is_working_set=True),
                 distinct=True,
+            ),
+            cardio_minutes=Sum(
+                "workout_exercises__sets__duration_minutes",
+                default=0,
             ),
         )
         if workout
@@ -566,7 +605,9 @@ def remove_muscle_group(request, date_str, pk):
 def muscle_group_detail(request, date_str, pk):
     workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
     added_exercises = workout_group.workout_exercises.select_related("exercise").annotate(
-        working_sets=Count("sets", filter=Q(sets__is_working_set=True))
+        working_sets=Count("sets", filter=Q(sets__is_working_set=True)),
+        record_count=Count("sets"),
+        cardio_minutes=Sum("sets__duration_minutes", default=0),
     )
     set_counts = workout_group.workout_exercises.aggregate(
         total_set_count=Count("sets"),
@@ -574,6 +615,7 @@ def muscle_group_detail(request, date_str, pk):
             "sets",
             filter=Q(sets__is_working_set=True),
         ),
+        total_duration_minutes=Sum("sets__duration_minutes", default=0),
     )
     available_exercises = _available_exercises_for(
         request.user,
@@ -583,6 +625,19 @@ def muscle_group_detail(request, date_str, pk):
     if query:
         available_exercises = available_exercises.filter(name__icontains=query)
     exercise_form = ExerciseSelectionForm(queryset=available_exercises)
+    preset_params = [
+        ("muscle_group", workout_group.muscle_group_id),
+        ("return_to", request.path),
+        *[
+            ("exercises", exercise_id)
+            for exercise_id in added_exercises.values_list("exercise_id", flat=True)
+        ],
+    ]
+    save_preset_url = (
+        f'{reverse("core:personalization_preset_create")}?{urlencode(preset_params)}'
+        if len(preset_params) > 2
+        else ""
+    )
     return render(
         request,
         "core/muscle_group.html",
@@ -591,6 +646,8 @@ def muscle_group_detail(request, date_str, pk):
             "added_exercises": added_exercises,
             "exercise_form": exercise_form,
             "query": query,
+            "is_cardio": workout_group.muscle_group.is_cardio,
+            "save_preset_url": save_preset_url,
             **set_counts,
         },
     )
@@ -631,6 +688,47 @@ def add_exercises(request, date_str, pk):
 
     messages.error(request, "Selecione ao menos um exercício válido.")
     return redirect("core:muscle_group", date_str=date_str, pk=pk)
+
+
+@require_POST
+@login_required
+def reorder_exercises(request, date_str, pk):
+    workout_group = _owned_workout_muscle_group(request.user, date_str, pk)
+    try:
+        payload = json.loads(request.body)
+        requested_order = [int(item) for item in payload["order"]]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "Ordem inválida."}, status=400)
+
+    with transaction.atomic():
+        entries = list(
+            WorkoutExercise.objects.select_for_update().filter(
+                workout_muscle_group=workout_group
+            )
+        )
+        current_ids = {entry.pk for entry in entries}
+        if (
+            len(requested_order) != len(entries)
+            or len(set(requested_order)) != len(requested_order)
+            or set(requested_order) != current_ids
+        ):
+            return JsonResponse(
+                {"error": "A ordem deve conter todos os exercícios do treino."},
+                status=400,
+            )
+
+        WorkoutExercise.objects.filter(workout_muscle_group=workout_group).update(
+            order=F("order") + 1_000_000
+        )
+        entries_by_id = {entry.pk: entry for entry in entries}
+        ordered_entries = []
+        for order, entry_id in enumerate(requested_order, start=1):
+            entry = entries_by_id[entry_id]
+            entry.order = order
+            ordered_entries.append(entry)
+        WorkoutExercise.objects.bulk_update(ordered_entries, ["order"])
+
+    return JsonResponse({"ok": True, "order": requested_order})
 
 
 @login_required
@@ -750,6 +848,7 @@ def remove_exercise(request, date_str, pk):
 def workout_exercise_detail(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
     exercise_sets = workout_exercise.sets.all()
+    is_cardio = workout_exercise.workout_muscle_group.muscle_group.is_cardio
     return render(
         request,
         "core/workout_exercise.html",
@@ -757,7 +856,12 @@ def workout_exercise_detail(request, date_str, pk):
             "workout_exercise": workout_exercise,
             "exercise_sets": exercise_sets,
             "working_set_count": exercise_sets.filter(is_working_set=True).count(),
-            "set_form": ExerciseSetForm(),
+            "total_duration_minutes": exercise_sets.aggregate(
+                total=Sum("duration_minutes"),
+            )["total"]
+            or 0,
+            "is_cardio": is_cardio,
+            "set_form": ExerciseSetForm(workout_exercise=workout_exercise),
         },
     )
 
@@ -766,13 +870,18 @@ def workout_exercise_detail(request, date_str, pk):
 @login_required
 def add_set(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
-    form = ExerciseSetForm(request.POST)
+    form = ExerciseSetForm(request.POST, workout_exercise=workout_exercise)
     if form.is_valid():
         exercise_set = form.save(commit=False)
         exercise_set.workout_exercise = workout_exercise
         exercise_set.order = _next_order(workout_exercise.sets.all())
         exercise_set.save()
-        messages.success(request, "Série adicionada.")
+        messages.success(
+            request,
+            "Registro de cardio adicionado."
+            if workout_exercise.workout_muscle_group.muscle_group.is_cardio
+            else "Série adicionada.",
+        )
     else:
         exercise_sets = workout_exercise.sets.all()
         return render(
@@ -782,6 +891,11 @@ def add_set(request, date_str, pk):
                 "workout_exercise": workout_exercise,
                 "exercise_sets": exercise_sets,
                 "working_set_count": exercise_sets.filter(is_working_set=True).count(),
+                "total_duration_minutes": exercise_sets.aggregate(
+                    total=Sum("duration_minutes"),
+                )["total"]
+                or 0,
+                "is_cardio": workout_exercise.workout_muscle_group.muscle_group.is_cardio,
                 "set_form": form,
             },
             status=400,
@@ -793,16 +907,26 @@ def add_set(request, date_str, pk):
 def edit_set(request, pk):
     exercise_set = get_object_or_404(
         ExerciseSet.objects.select_related(
-            "workout_exercise__workout_muscle_group__workout"
+            "workout_exercise__workout_muscle_group__workout",
+            "workout_exercise__workout_muscle_group__muscle_group",
         ),
         pk=pk,
         workout_exercise__workout_muscle_group__workout__user=request.user,
     )
     if request.method == "POST":
-        form = ExerciseSetForm(request.POST, instance=exercise_set)
+        form = ExerciseSetForm(
+            request.POST,
+            instance=exercise_set,
+            workout_exercise=exercise_set.workout_exercise,
+        )
         if form.is_valid():
             form.save()
-            messages.success(request, "Série atualizada.")
+            messages.success(
+                request,
+                "Registro de cardio atualizado."
+                if exercise_set.workout_exercise.workout_muscle_group.muscle_group.is_cardio
+                else "Série atualizada.",
+            )
             workout = exercise_set.workout_exercise.workout_muscle_group.workout
             return redirect(
                 "core:workout_exercise",
@@ -810,7 +934,10 @@ def edit_set(request, pk):
                 pk=exercise_set.workout_exercise_id,
             )
     else:
-        form = ExerciseSetForm(instance=exercise_set)
+        form = ExerciseSetForm(
+            instance=exercise_set,
+            workout_exercise=exercise_set.workout_exercise,
+        )
     return render(request, "core/set_form.html", {"form": form, "exercise_set": exercise_set})
 
 
