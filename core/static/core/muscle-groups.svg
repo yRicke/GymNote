@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+    <symbol id="peito" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 10.2C9 7 11.7 6.3 16 8.8c4.3-2.5 7-1.8 9.5 1.4"/>
+            <path d="M8 10c.6 5.8 2 11.1 4.1 16M24 10c-.6 5.8-2 11.1-4.1 16"/>
+            <path d="M9.2 14.7c2.7-2 5.2-1.6 6.8.5 1.6-2.1 4.1-2.5 6.8-.5M10.1 19.2c2 1.2 4.1 1.2 5.9-.3 1.8 1.5 3.9 1.5 5.9.3"/>
+        </g>
+    </symbol>
+    <symbol id="costas" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 10.2C9 7 11.7 6.3 16 8.8c4.3-2.5 7-1.8 9.5 1.4"/>
+            <path d="M8 10c.6 5.8 2 11.1 4.1 16M24 10c-.6 5.8-2 11.1-4.1 16M16 9v16.5"/>
+            <path d="M10.2 12.1c3 .6 4.3 2.1 4.4 5.3-2.2.2-3.8-.8-4.8-3.1M21.8 12.1c-3 .6-4.3 2.1-4.4 5.3 2.2.2 3.8-.8 4.8-3.1"/>
+        </g>
+    </symbol>
+    <symbol id="ombros" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 13c1-4 4-6 8.2-5.3L16 9l2.8-1.3C23 7 26 9 27 13M8 12.2c.5 5.2 1.8 9.8 3.8 13.8M24 12.2c-.5 5.2-1.8 9.8-3.8 13.8"/>
+            <path d="M5.8 12.5c1.8-1.8 4-1.7 5.7.2M26.2 12.5c-1.8-1.8-4-1.7-5.7.2M12 13.7c2.5 1.5 5.5 1.5 8 0"/>
+        </g>
+    </symbol>
+    <symbol id="biceps" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 25.5c-2.1-3.8-.8-8.5.7-12.1l2-5.2c.5-1.4 2.3-1.9 3.4-.8l2.1 2-3.1 5.5c3.4-2.2 7-1.7 9.2.8l4.2 4.8c1.4 1.7.4 4.4-1.8 4.7-5.7.8-11.2-.5-16.7.3Z"/>
+            <path d="M11.6 14.9c1.3 1.1 2.8 1.6 4.6 1.4M18.9 15c-1 1.2-1.2 2.7-.7 4.3"/>
+        </g>
+    </symbol>
+    <symbol id="triceps" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M25.5 25.5c2.1-3.8.8-8.5-.7-12.1l-2-5.2c-.5-1.4-2.3-1.9-3.4-.8l-2.1 2 3.1 5.5c-3.4-2.2-7-1.7-9.2.8L7 20.5c-1.4 1.7-.4 4.4 1.8 4.7 5.7.8 11.2-.5 16.7.3Z"/>
+            <path d="M20.4 14.9c-1.3 1.1-2.8 1.6-4.6 1.4M13.3 15c1 1.2 1.2 2.7.7 4.3M21.6 10.2l2.2-1M22.7 12.4l2.5-.2"/>
+        </g>
+    </symbol>
+    <symbol id="quadriceps" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11.2 5.5c-1.5 5-1.5 9.5.1 13.6l1.2 3.2-.8 4.8M21 5.5c1.7 5.1 1.3 9.4-.6 13.2l-1.6 3.1.7 5.3"/>
+            <path d="M11 10.3c3-1.8 6.6-1.7 10.2.1M12 13.6c2.8 1.3 5.4 1.3 8.2-.1M12.2 16.7c1.5-1 2.8-1 3.8.2 1.1-1.2 2.4-1.2 3.8-.2M12.5 22.3c2.1 1 4.2.9 6.3-.5"/>
+        </g>
+    </symbol>
+    <symbol id="posterior" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.7 5.5c-1.2 5.2-1 9.8.8 13.8l1.2 2.8-.8 5M21.3 5.5c1.2 5.2 1 9.8-.8 13.8l-1.2 2.8.8 5"/>
+            <path d="M11 10.2c1.9 1.4 3.5 1.5 5 .3 1.5 1.2 3.1 1.1 5-.3M11.5 14.2c1.8.9 3.3.8 4.5-.4 1.2 1.2 2.7 1.3 4.5.4M12 18.4c1.7.8 3 .7 4-.4 1 1.1 2.3 1.2 4 .4"/>
+        </g>
+    </symbol>
+    <symbol id="gluteos" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.1 6.5c-1.5 4.3-1.4 8 .2 11.1-1 3.4-.4 6.3 1.8 8.4M22.9 6.5c1.5 4.3 1.4 8-.2 11.1 1 3.4.4 6.3-1.8 8.4M16 7.8v18.1"/>
+            <path d="M9.3 17.6c1.7-2.4 4.7-2.6 6.7-.3 2-2.3 5-2.1 6.7.3M10 20.5c1.6 2.2 3.6 2.7 6 1.3 2.4 1.4 4.4.9 6-1.3"/>
+        </g>
+    </symbol>
+    <symbol id="panturrilhas" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 5.5c-.8 4.5-.1 7.9 1.7 10.4-1.3 2.7-1.4 6.1-.5 11.1M21 5.5c.8 4.5.1 7.9-1.7 10.4 1.3 2.7 1.4 6.1.5 11.1"/>
+            <path d="M12.7 15.9c1.8-2.1 4.8-2.2 6.6 0M12.2 18.7c1.5 1.9 2.7 2 3.8.5 1.1 1.5 2.3 1.4 3.8-.5M12.2 27h3.2M19.8 27h-3.2"/>
+        </g>
+    </symbol>
+    <symbol id="abdomen" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7.3 9.5C10 7.2 12.7 6.8 16 8.4c3.3-1.6 6-1.2 8.7 1.1M8.5 9.2c.3 6.5 1.5 12.2 3.6 17M23.5 9.2c-.3 6.5-1.5 12.2-3.6 17M16 9v16.7"/>
+            <path d="M11.8 13.1h2.6M17.6 13.1h2.6M11.7 17.3h2.7M17.6 17.3h2.7M12.2 21.6h2.2M17.6 21.6h2.2"/>
+        </g>
+    </symbol>
+    <symbol id="cardio" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="19.5" cy="5.7" r="2.3"/>
+            <path d="m14.5 12.2 4.1-2.6 3.2 3.5 4.2 1M17.7 10.5l-1.5 6.2-5.1 3.6M16.2 16.7l4.7 3.1 2.8 6M13.7 19l-4.9 7M12.8 12.8l-4.4 2"/>
+        </g>
+    </symbol>
+    <symbol id="forca" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 16h14M5.5 11.5v9M9 9.5v13M23 9.5v13M26.5 11.5v9"/>
+        </g>
+    </symbol>
+</svg>

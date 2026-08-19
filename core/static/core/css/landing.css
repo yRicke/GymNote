@@ -407,7 +407,8 @@ html:has(.landing-page) {
 .workout-demo__header span { color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: .58rem; letter-spacing: .08em; }
 .workout-demo__header strong { font-size: 1.5rem; }
 .workout-demo__group { display: flex; min-height: 70px; margin-top: 9px; padding: 12px 15px; align-items: center; gap: 13px; border-radius: 12px; background: #222226; }
-.workout-demo__group > i:first-child { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #303035; color: var(--accent); }
+.workout-demo__icon { display: grid; flex: 0 0 auto; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #303035; color: var(--accent); }
+.workout-demo__icon svg { width: 30px; height: 30px; }
 .workout-demo__group > i:last-child { margin-left: auto; color: #77777e; }
 .workout-demo__group span { display: grid; }
 .workout-demo__group small { color: #88878e; }

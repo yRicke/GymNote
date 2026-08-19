@@ -9,16 +9,16 @@ from django.utils.text import slugify
 
 class MuscleGroup(models.Model):
     ICON_BY_SLUG = {
-        "peito": "rib_cage",
-        "costas": "rowing",
-        "ombros": "sports_handball",
-        "biceps": "fitness_center",
-        "triceps": "exercise",
-        "quadriceps": "femur",
-        "posterior-de-coxa": "femur_alt",
-        "gluteos": "skeleton",
-        "panturrilhas": "footprint",
-        "abdomen": "body_system",
+        "peito": "peito",
+        "costas": "costas",
+        "ombros": "ombros",
+        "biceps": "biceps",
+        "triceps": "triceps",
+        "quadriceps": "quadriceps",
+        "posterior-de-coxa": "posterior",
+        "gluteos": "gluteos",
+        "panturrilhas": "panturrilhas",
+        "abdomen": "abdomen",
     }
 
     class TrackingType(models.TextChoices):
@@ -48,11 +48,11 @@ class MuscleGroup(models.Model):
     @property
     def icon_name(self):
         if self.is_cardio:
-            return "directions_run"
+            return "cardio"
 
         return self.ICON_BY_SLUG.get(
             self.slug,
-            self.ICON_BY_SLUG.get(slugify(self.name), "fitness_center"),
+            self.ICON_BY_SLUG.get(slugify(self.name), "forca"),
         )
 
 

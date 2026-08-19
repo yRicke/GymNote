@@ -342,7 +342,7 @@ h3 { margin-bottom: 6px; font-size: 1rem; }
 .exercise-group { display: grid; gap: 10px; }
 .exercise-group__heading { display: flex; align-items: center; gap: 12px; }
 .exercise-group__heading h3 { margin: 0; font-size: 1rem; }
-.exercise-group__heading span:not(.material-symbols-outlined) { color: var(--text-muted); font-size: .75rem; }
+.exercise-group__heading > div > span { color: var(--text-muted); font-size: .75rem; }
 
 .list-card {
     display: flex;
@@ -369,6 +369,13 @@ a.list-card:focus-visible,
     border-radius: 999px;
     background: var(--surface-highest);
     color: var(--accent);
+}
+
+.muscle-group-icon svg {
+    display: block;
+    width: 31px;
+    height: 31px;
+    overflow: visible;
 }
 
 .list-card__body { display: grid; flex: 1; min-width: 0; }
