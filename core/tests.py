@@ -1028,36 +1028,6 @@ class SeedGymDataTests(TestCase):
         self.assertEqual(cardio.tracking_type, MuscleGroup.TrackingType.CARDIO)
         self.assertEqual(cardio.exercises.count(), 8)
 
-    def test_seeded_groups_have_corresponding_icons(self):
-        call_command("seed_gym_data")
-
-        expected_icons = {
-            "peito": "peito",
-            "costas": "costas",
-            "ombros": "ombros",
-            "biceps": "biceps",
-            "triceps": "triceps",
-            "quadriceps": "quadriceps",
-            "posterior-de-coxa": "posterior",
-            "gluteos": "gluteos",
-            "panturrilhas": "panturrilhas",
-            "abdomen": "abdomen",
-            "cardio": "cardio",
-        }
-
-        self.assertEqual(
-            {
-                group.slug: group.icon_name
-                for group in MuscleGroup.objects.order_by("order")
-            },
-            expected_icons,
-        )
-
-    def test_unknown_strength_group_uses_fallback_icon(self):
-        group = MuscleGroup(name="Antebraços", slug="antebracos")
-
-        self.assertEqual(group.icon_name, "forca")
-
 
 class TrainingEnhancementTests(TestCase):
     workout_date = date(2026, 8, 19)
@@ -1149,8 +1119,6 @@ class TrainingEnhancementTests(TestCase):
         self.assertContains(response, "Extensora unilateral")
         self.assertContains(response, "Corrida inclinada")
         self.assertContains(response, 'class="exercise-groups"')
-        self.assertContains(response, "muscle-groups.svg#quadriceps")
-        self.assertContains(response, "muscle-groups.svg#cardio")
 
     def test_cardio_uses_duration_distance_and_perceived_exertion(self):
         workout_group = self.create_workout_group(group=self.cardio_group)

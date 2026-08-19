@@ -32,7 +32,7 @@
                 {% for workout_group in workout_groups %}
                     <article class="list-card list-card--actions">
                         <a class="list-card__main" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                            {% include "includes/muscle_group_icon.html" with icon_name=workout_group.muscle_group.icon_name %}
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if workout_group.muscle_group.is_cardio %}directions_run{% else %}exercise{% endif %}</span>
                             <span class="list-card__body">
                                 <strong>{{ workout_group.muscle_group.name }}</strong>
                                 <small>{% if workout_group.muscle_group.is_cardio %}{{ workout_group.exercise_count }} atividade{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.cardio_minutes }} min registrado{{ workout_group.cardio_minutes|pluralize:"s" }}{% else %}{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.working_set_count }} série{{ workout_group.working_set_count|pluralize:"s" }} válida{{ workout_group.working_set_count|pluralize:"s" }}{% endif %}</small>
