@@ -1,6 +1,0 @@
-{% load static %}
-<span class="{% if icon_class %}{{ icon_class }}{% else %}list-card__icon{% endif %} muscle-group-icon" aria-hidden="true">
-    <svg viewBox="0 0 32 32" focusable="false">
-        <use href="{% static 'core/muscle-groups.svg' %}#{{ icon_name|default:'forca' }}"></use>
-    </svg>
-</span>

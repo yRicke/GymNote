@@ -30,7 +30,7 @@
                 {% for group in exercise_groups %}
                     <section class="exercise-group" aria-labelledby="exercise-group-{{ group.pk }}">
                         <div class="exercise-group__heading">
-                            {% include "includes/muscle_group_icon.html" with icon_name=group.icon_name %}
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if group.is_cardio %}directions_run{% else %}exercise{% endif %}</span>
                             <div>
                                 <h3 id="exercise-group-{{ group.pk }}">{{ group.name }}</h3>
                                 <span>{{ group.custom_exercises|length }} exercício{{ group.custom_exercises|length|pluralize:"s" }}</span>
