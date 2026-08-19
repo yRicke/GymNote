@@ -22,7 +22,7 @@ class MuscleGroupSelectionForm(forms.Form):
     muscle_groups = forms.ModelMultipleChoiceField(
         queryset=MuscleGroup.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        label="Grupos musculares",
+        label="Grupos e modalidades",
     )
 
     def __init__(self, *args, queryset=None, **kwargs):
@@ -35,7 +35,7 @@ class WorkoutFilterForm(forms.Form):
     muscle_groups = forms.ModelMultipleChoiceField(
         queryset=MuscleGroup.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        label="Grupos musculares",
+        label="Grupos e modalidades",
         required=False,
     )
 
@@ -65,12 +65,18 @@ class ExerciseSetForm(forms.ModelForm):
             "weight_kg",
             "reps",
             "partial_reps",
+            "duration_minutes",
+            "distance_km",
+            "perceived_exertion",
             "is_working_set",
         )
         labels = {
             "weight_kg": "Peso em kg",
             "reps": "Repetições",
             "partial_reps": "Repetições parciais",
+            "duration_minutes": "Duração em minutos",
+            "distance_km": "Distância em km",
+            "perceived_exertion": "Esforço percebido (1–10)",
             "is_working_set": "Série válida/de trabalho",
         }
         widgets = {
@@ -83,14 +89,57 @@ class ExerciseSetForm(forms.ModelForm):
             "partial_reps": forms.NumberInput(
                 attrs={"placeholder": "0", "inputmode": "numeric"}
             ),
+            "duration_minutes": forms.NumberInput(
+                attrs={"placeholder": "30", "inputmode": "numeric", "min": "1"}
+            ),
+            "distance_km": forms.NumberInput(
+                attrs={"placeholder": "Opcional", "inputmode": "decimal", "step": "0.01"}
+            ),
+            "perceived_exertion": forms.NumberInput(
+                attrs={"placeholder": "1 a 10", "inputmode": "numeric", "min": "1", "max": "10"}
+            ),
         }
+
+    def __init__(self, *args, workout_exercise=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.workout_exercise = workout_exercise or getattr(
+            self.instance,
+            "workout_exercise",
+            None,
+        )
+        self.is_cardio = bool(
+            self.workout_exercise
+            and self.workout_exercise.workout_muscle_group.muscle_group.is_cardio
+        )
+        if self.is_cardio:
+            for field_name in ("weight_kg", "reps", "partial_reps", "is_working_set"):
+                self.fields.pop(field_name)
+            self.fields["duration_minutes"].required = True
+        else:
+            for field_name in ("duration_minutes", "distance_km", "perceived_exertion"):
+                self.fields.pop(field_name)
+
+    def save(self, commit=True):
+        exercise_set = super().save(commit=False)
+        if self.is_cardio:
+            exercise_set.weight_kg = None
+            exercise_set.reps = None
+            exercise_set.partial_reps = None
+            exercise_set.is_working_set = False
+        else:
+            exercise_set.duration_minutes = None
+            exercise_set.distance_km = None
+            exercise_set.perceived_exertion = None
+        if commit:
+            exercise_set.save()
+        return exercise_set
 
 
 class CustomExerciseForm(forms.ModelForm):
     muscle_group = forms.ModelChoiceField(
         queryset=MuscleGroup.objects.none(),
-        label="Grupo muscular",
-        empty_label="Selecione um grupo",
+        label="Grupo ou modalidade",
+        empty_label="Selecione uma opção",
     )
 
     class Meta:
@@ -152,8 +201,8 @@ class CustomExerciseForm(forms.ModelForm):
 class PresetGroupSelectionForm(forms.Form):
     muscle_group = forms.ModelChoiceField(
         queryset=MuscleGroup.objects.none(),
-        label="Grupo muscular",
-        empty_label="Selecione um grupo",
+        label="Grupo ou modalidade",
+        empty_label="Selecione uma opção",
     )
 
     def __init__(self, *args, **kwargs):
@@ -178,7 +227,14 @@ class WorkoutPresetForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"placeholder": "Ex.: Quadríceps A"}),
         }
 
-    def __init__(self, *args, user, muscle_group, **kwargs):
+    def __init__(
+        self,
+        *args,
+        user,
+        muscle_group,
+        initial_exercise_ids=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.user = user
         self.muscle_group = muscle_group
@@ -191,6 +247,10 @@ class WorkoutPresetForm(forms.ModelForm):
             self.fields["exercises"].initial = self.instance.exercise_entries.order_by(
                 "order"
             ).values_list("exercise_id", flat=True)
+        elif not self.is_bound and initial_exercise_ids:
+            self.fields["exercises"].initial = self.fields[
+                "exercises"
+            ].queryset.filter(pk__in=initial_exercise_ids)
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()

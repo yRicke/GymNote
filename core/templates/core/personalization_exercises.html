@@ -25,22 +25,31 @@
             </a>
         </div>
 
-        {% if custom_exercises %}
-            <div class="stack-list">
-                {% for exercise in custom_exercises %}
-                    <article class="list-card list-card--actions">
-                        <a class="list-card__main" href="{% url 'core:personalization_exercise_edit' pk=exercise.pk %}" aria-label="Editar {{ exercise.name }}">
-                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
-                            <span class="list-card__body">
-                                <strong>{{ exercise.name }}</strong>
-                                <small>{% for group in exercise.muscle_groups.all %}{{ group.name }}{% empty %}Sem grupo muscular{% endfor %}</small>
-                            </span>
-                            <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">edit</span>
-                        </a>
-                        <a class="icon-button icon-button--danger" href="{% url 'core:personalization_exercise_delete' pk=exercise.pk %}" aria-label="Excluir {{ exercise.name }}">
-                            <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                        </a>
-                    </article>
+        {% if exercise_groups %}
+            <div class="exercise-groups">
+                {% for group in exercise_groups %}
+                    <section class="exercise-group" aria-labelledby="exercise-group-{{ group.pk }}">
+                        <div class="exercise-group__heading">
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if group.is_cardio %}directions_run{% else %}exercise{% endif %}</span>
+                            <div>
+                                <h3 id="exercise-group-{{ group.pk }}">{{ group.name }}</h3>
+                                <span>{{ group.custom_exercises|length }} exercício{{ group.custom_exercises|length|pluralize:"s" }}</span>
+                            </div>
+                        </div>
+                        <div class="stack-list">
+                            {% for exercise in group.custom_exercises %}
+                                <article class="list-card list-card--actions">
+                                    <a class="list-card__main" href="{% url 'core:personalization_exercise_edit' pk=exercise.pk %}" aria-label="Editar {{ exercise.name }}">
+                                        <span class="list-card__body"><strong>{{ exercise.name }}</strong><small>Exercício personalizado</small></span>
+                                        <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">edit</span>
+                                    </a>
+                                    <a class="icon-button icon-button--danger" href="{% url 'core:personalization_exercise_delete' pk=exercise.pk %}" aria-label="Excluir {{ exercise.name }}">
+                                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                                    </a>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
                 {% endfor %}
             </div>
         {% else %}

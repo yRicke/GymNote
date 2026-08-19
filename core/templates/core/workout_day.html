@@ -18,13 +18,13 @@
         {% if workout_groups %}
             <p>{% for workout_group in workout_groups %}{{ workout_group.muscle_group.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
         {% else %}
-            <p>Adicione os grupos musculares para começar.</p>
+            <p>Adicione grupos musculares ou cardio para começar.</p>
         {% endif %}
     </section>
 
     <section class="content-section">
         <div class="section-heading">
-            <h2>Grupos musculares</h2>
+            <h2>Grupos e modalidades</h2>
             {% if workout_groups %}<span class="pill">{{ workout_groups|length }} grupo{{ workout_groups|length|pluralize:"s" }}</span>{% endif %}
         </div>
         {% if workout_groups %}
@@ -32,10 +32,10 @@
                 {% for workout_group in workout_groups %}
                     <article class="list-card list-card--actions">
                         <a class="list-card__main" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">exercise</span>
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if workout_group.muscle_group.is_cardio %}directions_run{% else %}exercise{% endif %}</span>
                             <span class="list-card__body">
                                 <strong>{{ workout_group.muscle_group.name }}</strong>
-                                <small>{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.working_set_count }} série{{ workout_group.working_set_count|pluralize:"s" }} válida{{ workout_group.working_set_count|pluralize:"s" }}</small>
+                                <small>{% if workout_group.muscle_group.is_cardio %}{{ workout_group.exercise_count }} atividade{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.cardio_minutes }} min registrado{{ workout_group.cardio_minutes|pluralize:"s" }}{% else %}{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.working_set_count }} série{{ workout_group.working_set_count|pluralize:"s" }} válida{{ workout_group.working_set_count|pluralize:"s" }}{% endif %}</small>
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>

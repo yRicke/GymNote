@@ -175,6 +175,16 @@ CATALOG = {
         "Dead Bug",
         "Hollow Body",
     ],
+    "Cardio": [
+        "Caminhada",
+        "Corrida",
+        "Bicicleta Ergométrica",
+        "Elíptico",
+        "Escada",
+        "Remo Ergométrico",
+        "Pular Corda",
+        "HIIT",
+    ],
 }
 
 
@@ -191,6 +201,11 @@ class Command(BaseCommand):
                     "name": group_name,
                     "order": order,
                     "is_active": True,
+                    "tracking_type": (
+                        MuscleGroup.TrackingType.CARDIO
+                        if group_name == "Cardio"
+                        else MuscleGroup.TrackingType.STRENGTH
+                    ),
                 },
             )
             groups[group_name] = group

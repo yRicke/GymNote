@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Excluir série | GymNote{% endblock %}
+{% block title %}Excluir {% if exercise_set.workout_exercise.workout_muscle_group.muscle_group.is_cardio %}registro{% else %}série{% endif %} | GymNote{% endblock %}
 {% block header_leading %}
     <div class="app-header__leading">
         <a class="icon-button" href="{% url 'core:workout_exercise' date_str=exercise_set.workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=exercise_set.workout_exercise.pk %}" aria-label="Voltar ao exercício"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
-        <span class="brand">{% include "includes/logo_mark.html" %}<span>Excluir série</span></span>
+        <span class="brand">{% include "includes/logo_mark.html" %}<span>Excluir {% if exercise_set.workout_exercise.workout_muscle_group.muscle_group.is_cardio %}registro{% else %}série{% endif %}</span></span>
     </div>
 {% endblock %}
 
@@ -13,11 +13,16 @@
     <section class="confirmation-card">
         <span class="confirmation-card__icon material-symbols-outlined" aria-hidden="true">delete</span>
         <p class="eyebrow">{{ exercise_set.workout_exercise.exercise.name }}</p>
-        <h1>Excluir série {{ exercise_set.order }}?</h1>
-        <p>Esta ação remove permanentemente os dados da série.</p>
+        <h1>Excluir {% if exercise_set.workout_exercise.workout_muscle_group.muscle_group.is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}?</h1>
+        <p>Esta ação remove permanentemente os dados registrados.</p>
         <div class="confirmation-summary">
-            <span><small>Peso</small><strong>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg|floatformat:"-2" }} kg{% else %}—{% endif %}</strong></span>
-            <span><small>Repetições</small><strong>{{ exercise_set.reps|default_if_none:"—" }}</strong></span>
+            {% if exercise_set.workout_exercise.workout_muscle_group.muscle_group.is_cardio %}
+                <span><small>Duração</small><strong>{{ exercise_set.duration_minutes }} min</strong></span>
+                <span><small>Distância</small><strong>{% if exercise_set.distance_km is not None %}{{ exercise_set.distance_km|floatformat:"-2" }} km{% else %}—{% endif %}</strong></span>
+            {% else %}
+                <span><small>Peso</small><strong>{% if exercise_set.weight_kg is not None %}{{ exercise_set.weight_kg|floatformat:"-2" }} kg{% else %}—{% endif %}</strong></span>
+                <span><small>Repetições</small><strong>{{ exercise_set.reps|default_if_none:"—" }}</strong></span>
+            {% endif %}
         </div>
         <form method="post" class="button-stack">
             {% csrf_token %}

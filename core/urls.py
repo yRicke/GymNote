@@ -71,6 +71,11 @@ urlpatterns = [
         name="add_exercises",
     ),
     path(
+        "treino/<str:date_str>/grupo/<int:pk>/exercicios/reordenar/",
+        views.reorder_exercises,
+        name="reorder_exercises",
+    ),
+    path(
         "treino/<str:date_str>/exercicio/<int:pk>/",
         views.workout_exercise_detail,
         name="workout_exercise",

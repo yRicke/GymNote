@@ -15,12 +15,12 @@
     <section class="page-heading">
         <p class="eyebrow eyebrow--accent">Montagem rápida</p>
         <h1>{{ page_title }}</h1>
-        <p>Escolha um grupo e os exercícios que devem ser sugeridos juntos.</p>
+        <p>Escolha um grupo ou modalidade e os exercícios que devem ser sugeridos juntos.</p>
     </section>
 
     <section class="panel content-section">
         <div class="section-heading">
-            <h2>1. Grupo muscular</h2>
+            <h2>1. Grupo ou modalidade</h2>
             {% if selected_group %}<span class="pill">{{ selected_group.name }}</span>{% endif %}
         </div>
         <form method="get" class="app-form">
@@ -39,6 +39,7 @@
             <form method="post" class="app-form">
                 {% csrf_token %}
                 <input type="hidden" name="muscle_group" value="{{ selected_group.pk }}">
+                {% if return_url %}<input type="hidden" name="return_to" value="{{ return_url }}">{% endif %}
                 {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
                 <div class="field">
                     {{ form.name.label_tag }}
