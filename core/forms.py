@@ -185,14 +185,7 @@ class CustomExerciseForm(forms.ModelForm):
         return exercise
 
 
-class WorkoutPresetForm(forms.ModelForm):
-    exercises = ExerciseMultipleChoiceField(
-        queryset=Exercise.objects.none(),
-        widget=forms.CheckboxSelectMultiple,
-        label="Exercícios",
-    )
-    exercise_order = forms.CharField(required=False, widget=forms.HiddenInput)
-
+class WorkoutPresetNameForm(forms.ModelForm):
     class Meta:
         model = WorkoutPreset
         fields = ("name",)
@@ -201,6 +194,35 @@ class WorkoutPresetForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"placeholder": "Ex.: Quadríceps A"}),
         }
 
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_name(self):
+        name = self.cleaned_data["name"].strip()
+        presets = WorkoutPreset.objects.filter(user=self.user, name__iexact=name)
+        if self.instance.pk:
+            presets = presets.exclude(pk=self.instance.pk)
+        if presets.exists():
+            raise forms.ValidationError("Você já possui uma predefinição com este nome.")
+        return name
+
+    def save(self, commit=True):
+        preset = super().save(commit=False)
+        preset.user = self.user
+        if commit:
+            preset.save()
+        return preset
+
+
+class WorkoutPresetForm(WorkoutPresetNameForm):
+    exercises = ExerciseMultipleChoiceField(
+        queryset=Exercise.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="Exercícios",
+    )
+    exercise_order = forms.CharField(required=False, widget=forms.HiddenInput)
+
     def __init__(
         self,
         *args,
@@ -208,8 +230,7 @@ class WorkoutPresetForm(forms.ModelForm):
         initial_entries=None,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
-        self.user = user
+        super().__init__(*args, user=user, **kwargs)
         self.entry_groups = {}
         available_exercises = Exercise.objects.filter(
             Q(user__isnull=True) | Q(user=user),
@@ -258,15 +279,6 @@ class WorkoutPresetForm(forms.ModelForm):
             self.fields["exercises"].initial = initial_ids
             self.fields["exercise_order"].initial = ",".join(map(str, initial_ids))
 
-    def clean_name(self):
-        name = self.cleaned_data["name"].strip()
-        presets = WorkoutPreset.objects.filter(user=self.user, name__iexact=name)
-        if self.instance.pk:
-            presets = presets.exclude(pk=self.instance.pk)
-        if presets.exists():
-            raise forms.ValidationError("Você já possui uma predefinição com este nome.")
-        return name
-
     def clean(self):
         cleaned_data = super().clean()
         exercises = cleaned_data.get("exercises")
@@ -295,7 +307,6 @@ class WorkoutPresetForm(forms.ModelForm):
     @transaction.atomic
     def save(self, commit=True):
         preset = super().save(commit=False)
-        preset.user = self.user
         if commit:
             preset.save()
             preset.exercise_entries.all().delete()

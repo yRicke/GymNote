@@ -143,6 +143,135 @@
         });
     }
 
+    const dialogOpeners = new Map();
+    const resetPresetDialog = (dialog) => {
+        const form = dialog.querySelector("[data-preset-dialog-form]");
+        if (!form) return;
+        form.reset();
+        form.removeAttribute("aria-busy");
+        form.dataset.submitting = "false";
+        form.querySelectorAll("button, input").forEach((control) => {
+            control.disabled = false;
+        });
+        const submit = form.querySelector("[data-dialog-submit]");
+        if (submit) {
+            submit.textContent = submit.dataset.idleText;
+            if (form.matches("[data-preset-selection-form]")) submit.disabled = true;
+        }
+        const errors = form.querySelector("[data-dialog-errors]");
+        if (errors) {
+            errors.hidden = true;
+            errors.replaceChildren();
+        }
+    };
+    const showDialogErrors = (form, data) => {
+        const errors = form.querySelector("[data-dialog-errors]");
+        if (!errors) return;
+        const messages = data.errors
+            ? Object.values(data.errors).flat()
+            : [data.message || "Não foi possível concluir. Tente novamente."];
+        errors.replaceChildren();
+        messages.forEach((message) => {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = message;
+            errors.append(paragraph);
+        });
+        errors.hidden = false;
+        errors.focus({ preventScroll: true });
+    };
+
+    document.querySelectorAll("[data-dialog-open]").forEach((opener) => {
+        opener.addEventListener("click", () => {
+            const dialog = document.getElementById(opener.dataset.dialogOpen);
+            if (!dialog || typeof dialog.showModal !== "function") return;
+            dialogOpeners.set(dialog, opener);
+            resetPresetDialog(dialog);
+            dialog.showModal();
+            window.requestAnimationFrame(() => {
+                const firstField = dialog.querySelector(
+                    'input:not([type="hidden"]):not(:disabled)',
+                );
+                firstField?.focus({ preventScroll: true });
+            });
+        });
+    });
+
+    document.querySelectorAll(".preset-dialog").forEach((dialog) => {
+        dialog.querySelectorAll("[data-dialog-close]").forEach((button) => {
+            button.addEventListener("click", () => dialog.close());
+        });
+        dialog.addEventListener("click", (event) => {
+            if (event.target === dialog) dialog.close();
+        });
+        dialog.addEventListener("close", () => {
+            resetPresetDialog(dialog);
+            dialogOpeners.get(dialog)?.focus({ preventScroll: true });
+            dialogOpeners.delete(dialog);
+        });
+    });
+
+    document.querySelectorAll("[data-preset-selection-form]").forEach((form) => {
+        const submit = form.querySelector("[data-dialog-submit]");
+        form.addEventListener("change", (event) => {
+            if (!event.target.matches('input[name="preset_id"]')) return;
+            submit.disabled = !form.querySelector('input[name="preset_id"]:checked');
+        });
+    });
+
+    document.querySelectorAll("[data-preset-dialog-form]").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (form.dataset.submitting === "true") return;
+
+            const submit = form.querySelector("[data-dialog-submit]");
+            const errors = form.querySelector("[data-dialog-errors]");
+            const formData = new FormData(form);
+            form.dataset.submitting = "true";
+            form.setAttribute("aria-busy", "true");
+            if (errors) errors.hidden = true;
+            form.querySelectorAll("button, input").forEach((control) => {
+                control.disabled = true;
+            });
+            submit.textContent = submit.dataset.loadingText;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    body: formData,
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    showDialogErrors(form, data);
+                    return;
+                }
+                window.location.reload();
+            } catch (error) {
+                showDialogErrors(form, {
+                    message: "Não foi possível conectar. Verifique sua conexão e tente novamente.",
+                });
+            } finally {
+                if (form.isConnected && form.dataset.submitting === "true") {
+                    form.dataset.submitting = "false";
+                    form.removeAttribute("aria-busy");
+                    form.querySelectorAll("button, input").forEach((control) => {
+                        control.disabled = false;
+                    });
+                    submit.textContent = submit.dataset.idleText;
+                    if (form.matches("[data-preset-selection-form]")) {
+                        submit.disabled = !form.querySelector(
+                            'input[name="preset_id"]:checked',
+                        );
+                    }
+                }
+            }
+        });
+    });
+
     document.querySelectorAll("[data-reorder-list]").forEach((list) => {
         const status = list.parentElement.querySelector("[data-reorder-status]");
         const csrfToken = list.querySelector("[data-csrf-token]")?.value;

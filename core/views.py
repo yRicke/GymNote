@@ -1,7 +1,6 @@
 import calendar
 import json
 from datetime import date
-from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -20,6 +19,7 @@ from .forms import (
     ExerciseSelectionForm,
     ExerciseSetForm,
     WorkoutFilterForm,
+    WorkoutPresetNameForm,
     WorkoutPresetForm,
 )
 from .models import (
@@ -29,6 +29,7 @@ from .models import (
     Workout,
     WorkoutExercise,
     WorkoutPreset,
+    WorkoutPresetExercise,
 )
 
 
@@ -52,6 +53,20 @@ def _safe_return_url(request):
     ):
         return return_url
     return None
+
+
+def _wants_json(request):
+    return (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("Accept", "")
+    )
+
+
+def _form_errors_json(form):
+    return {
+        field: [error["message"] for error in errors]
+        for field, errors in form.errors.get_json_data(escape_html=True).items()
+    }
 
 
 def _owned_workout_exercise(user, date_str, pk):
@@ -427,19 +442,23 @@ def workout_day(request, date_str):
         else WorkoutExercise.objects.none()
     )
     group_summaries = (
-        workout.workout_exercises.values(
-            "muscle_group_id",
-            "muscle_group__name",
-            "muscle_group__order",
-            "muscle_group__tracking_type",
+        list(
+            workout.workout_exercises.values(
+                "muscle_group_id",
+                "muscle_group__name",
+                "muscle_group__order",
+                "muscle_group__tracking_type",
+            )
+            .annotate(
+                exercise_count=Count("id", distinct=True),
+                record_count=Count("sets"),
+                working_set_count=Count(
+                    "sets", filter=Q(sets__is_working_set=True)
+                ),
+                cardio_minutes=Sum("sets__duration_minutes", default=0),
+            )
+            .order_by("muscle_group__order", "muscle_group__name")
         )
-        .annotate(
-            exercise_count=Count("id", distinct=True),
-            record_count=Count("sets"),
-            working_set_count=Count("sets", filter=Q(sets__is_working_set=True)),
-            cardio_minutes=Sum("sets__duration_minutes", default=0),
-        )
-        .order_by("muscle_group__order", "muscle_group__name")
         if workout
         else []
     )
@@ -474,12 +493,7 @@ def workout_day(request, date_str):
         )
         .order_by("name")
     )
-    save_preset_url = ""
-    if workout and added_exercises.exists():
-        save_preset_url = (
-            f'{reverse("core:personalization_preset_create")}?'
-            f'{urlencode({"source_workout": workout.pk, "return_to": request.path})}'
-        )
+    quick_preset_form = WorkoutPresetNameForm(user=request.user)
     return render(
         request,
         "core/workout_day.html",
@@ -492,7 +506,9 @@ def workout_day(request, date_str):
             "exercise_count": exercise_count,
             "query": query,
             "presets": presets,
-            "save_preset_url": save_preset_url,
+            "quick_preset_form": quick_preset_form,
+            "workout_exercise_count": added_exercises.count(),
+            "workout_group_count": len(group_summaries),
         },
     )
 
@@ -588,15 +604,85 @@ def reorder_exercises(request, date_str):
 
 @require_POST
 @login_required
+def save_workout_preset(request, date_str):
+    workout_date = _parse_date(date_str)
+    workout = (
+        Workout.objects.filter(
+            user=request.user,
+            date=workout_date,
+            workout_exercises__isnull=False,
+        )
+        .distinct()
+        .first()
+    )
+    if workout is None:
+        message = "Adicione ao menos um exercício antes de salvar a predefinição."
+        if _wants_json(request):
+            return JsonResponse({"ok": False, "message": message}, status=404)
+        messages.error(request, message)
+        return redirect("core:workout_day", date_str=date_str)
+
+    form = WorkoutPresetNameForm(request.POST, user=request.user)
+    if not form.is_valid():
+        if _wants_json(request):
+            return JsonResponse(
+                {"ok": False, "errors": _form_errors_json(form)},
+                status=400,
+            )
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
+        return redirect("core:workout_day", date_str=date_str)
+
+    with transaction.atomic():
+        preset = form.save()
+        entries = list(
+            workout.workout_exercises.select_related(
+                "exercise", "muscle_group"
+            ).order_by("order")
+        )
+        WorkoutPresetExercise.objects.bulk_create(
+            [
+                WorkoutPresetExercise(
+                    preset=preset,
+                    exercise=entry.exercise,
+                    muscle_group=entry.muscle_group,
+                    order=entry.order,
+                )
+                for entry in entries
+            ]
+        )
+
+    message = f'Predefinição "{preset.name}" criada.'
+    messages.success(request, message)
+    if _wants_json(request):
+        return JsonResponse(
+            {"ok": True, "message": message, "preset_id": preset.pk},
+            status=201,
+        )
+    return redirect("core:workout_day", date_str=date_str)
+
+
+@require_POST
+@login_required
 def load_workout_preset(request, date_str):
     workout_date = _parse_date(date_str)
-    preset = get_object_or_404(
-        WorkoutPreset.objects.filter(user=request.user).prefetch_related(
+    preset = (
+        WorkoutPreset.objects.filter(
+            user=request.user,
+            pk=request.POST.get("preset_id"),
+        )
+        .prefetch_related(
             "exercise_entries__exercise__muscle_groups",
             "exercise_entries__muscle_group",
-        ),
-        pk=request.POST.get("preset_id"),
+        )
+        .first()
     )
+    if preset is None:
+        message = "Predefinição não encontrada."
+        if _wants_json(request):
+            return JsonResponse({"ok": False, "message": message}, status=404)
+        raise Http404(message)
     with transaction.atomic():
         workout, _ = Workout.objects.get_or_create(
             user=request.user, date=workout_date
@@ -633,15 +719,17 @@ def load_workout_preset(request, date_str):
             workout.delete()
     if added_count:
         exercise_label = "exercício" if added_count == 1 else "exercícios"
-        messages.success(
-            request,
+        message = (
             f'Predefinição "{preset.name}" carregada com '
-            f"{added_count} {exercise_label}.",
+            f"{added_count} {exercise_label}."
         )
+        messages.success(request, message)
     else:
-        messages.info(
-            request,
-            "Todos os exercícios disponíveis desta predefinição já estavam no treino.",
+        message = "Todos os exercícios disponíveis desta predefinição já estavam no treino."
+        messages.info(request, message)
+    if _wants_json(request):
+        return JsonResponse(
+            {"ok": True, "message": message, "added_count": added_count}
         )
     return redirect("core:workout_day", date_str=date_str)
 

@@ -62,25 +62,20 @@
                 {% endfor %}
             </div>
             <p class="reorder-status sr-only" data-reorder-status aria-live="polite"></p>
-            <a class="button button--ghost button--full save-preset-button" href="{{ save_preset_url }}"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</a>
         {% else %}
             <div class="empty-state"><span class="material-symbols-outlined" aria-hidden="true">fitness_center</span><h3>Nenhum exercício adicionado</h3><p>Use o catálogo abaixo para montar o treino deste dia.</p></div>
         {% endif %}
-    </section>
-
-    {% if presets %}
-        <section class="content-section panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Montagem rápida</p><h2>Carregar predefinição</h2></div><span class="material-symbols-outlined" aria-hidden="true">playlist_add_check</span></div>
-            <div class="stack-list">
-                {% for preset in presets %}
-                    <article class="list-card list-card--actions">
-                        <span class="list-card__main"><span class="list-card__icon material-symbols-outlined" aria-hidden="true">playlist_add_check</span><span class="list-card__body"><strong>{{ preset.name }}</strong><small>{{ preset.group_count }} grupo{{ preset.group_count|pluralize:"s" }} · {{ preset.exercise_count }} exercício{{ preset.exercise_count|pluralize:"s" }}</small></span></span>
-                        <form method="post" action="{% url 'core:load_workout_preset' date_str=workout_date|date:'Y-m-d' %}">{% csrf_token %}<input type="hidden" name="preset_id" value="{{ preset.pk }}"><button class="button button--primary button--compact" type="submit">Carregar</button></form>
-                    </article>
-                {% endfor %}
+        {% if added_exercises or presets %}
+            <div class="preset-actions">
+                {% if added_exercises %}
+                    <button class="button button--ghost button--full" type="button" data-dialog-open="save-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</button>
+                {% endif %}
+                {% if presets %}
+                    <button class="button button--preset-load button--full" type="button" data-dialog-open="load-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">playlist_play</span> Carregar predefinição</button>
+                {% endif %}
             </div>
-        </section>
-    {% endif %}
+        {% endif %}
+    </section>
 
     <section class="content-section panel exercise-search-region" data-exercise-search-region>
         <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Catálogo</p><h2>Adicionar exercícios</h2></div><span class="pill" data-search-count>{{ exercise_count }} {% if exercise_count == 1 %}disponível{% else %}disponíveis{% endif %}</span></div>
@@ -95,5 +90,61 @@
             <button class="button button--primary button--full" type="submit" data-exercise-submit><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
         </form>
     </section>
+
+    {% if added_exercises %}
+        <dialog class="preset-dialog" id="save-preset-dialog" aria-labelledby="save-preset-title">
+            <div class="preset-dialog__surface">
+                <div class="preset-dialog__heading">
+                    <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true">bookmark_add</span>
+                    <div><p class="eyebrow eyebrow--accent">Montagem rápida</p><h2 id="save-preset-title">Salvar predefinição</h2></div>
+                    <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+                </div>
+                <p class="preset-dialog__copy">Dê um nome para salvar todos os exercícios e a ordem atual.</p>
+                <div class="preset-dialog__summary"><strong>{{ workout_exercise_count }}</strong> exercício{{ workout_exercise_count|pluralize:"s" }} <span aria-hidden="true">·</span> <strong>{{ workout_group_count }}</strong> grupo{{ workout_group_count|pluralize:"s" }}</div>
+                <form class="app-form" method="post" action="{% url 'core:save_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-preset-dialog-form>
+                    {% csrf_token %}
+                    <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
+                    <div class="field">
+                        {{ quick_preset_form.name.label_tag }}
+                        {{ quick_preset_form.name }}
+                    </div>
+                    <div class="preset-dialog__actions">
+                        <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                        <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="Salvar predefinição" data-loading-text="Salvando…">Salvar predefinição</button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
+    {% endif %}
+
+    {% if presets %}
+        <dialog class="preset-dialog" id="load-preset-dialog" aria-labelledby="load-preset-title">
+            <div class="preset-dialog__surface">
+                <div class="preset-dialog__heading">
+                    <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true">playlist_play</span>
+                    <div><p class="eyebrow eyebrow--accent">Montagem rápida</p><h2 id="load-preset-title">Carregar predefinição</h2></div>
+                    <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+                </div>
+                <p class="preset-dialog__copy">Os exercícios que ainda não estão no treino serão adicionados ao final.</p>
+                <form class="app-form" method="post" action="{% url 'core:load_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-preset-dialog-form data-preset-selection-form>
+                    {% csrf_token %}
+                    <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
+                    <div class="preset-options" role="radiogroup" aria-label="Escolha uma predefinição">
+                        {% for preset in presets %}
+                            <label class="preset-option">
+                                <input type="radio" name="preset_id" value="{{ preset.pk }}">
+                                <span class="preset-option__marker material-symbols-outlined" aria-hidden="true">check</span>
+                                <span class="preset-option__body"><strong>{{ preset.name }}</strong><small>{{ preset.group_count }} grupo{{ preset.group_count|pluralize:"s" }} · {{ preset.exercise_count }} exercício{{ preset.exercise_count|pluralize:"s" }}</small></span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <div class="preset-dialog__actions">
+                        <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                        <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="Carregar predefinição" data-loading-text="Carregando…" disabled>Carregar predefinição</button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
+    {% endif %}
 </div>
 {% endblock %}

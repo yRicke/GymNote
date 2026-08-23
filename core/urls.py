@@ -56,6 +56,11 @@ urlpatterns = [
         name="reorder_exercises",
     ),
     path(
+        "treino/<str:date_str>/predefinicoes/salvar/",
+        views.save_workout_preset,
+        name="save_workout_preset",
+    ),
+    path(
         "treino/<str:date_str>/predefinicoes/carregar/",
         views.load_workout_preset,
         name="load_workout_preset",
