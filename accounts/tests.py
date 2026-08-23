@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import Exercise, MuscleGroup, Workout, WorkoutExercise
+
 
 class AccountsViewsTests(TestCase):
     def test_register_creates_and_authenticates_user(self):
@@ -18,3 +20,25 @@ class AccountsViewsTests(TestCase):
         self.assertRedirects(response, reverse("core:calendar"))
         self.assertTrue(User.objects.filter(username="novo_usuario").exists())
         self.assertIn("_auth_user_id", self.client.session)
+
+    def test_profile_counts_only_workouts_with_exercises(self):
+        user = User.objects.create_user("perfil", password="senha-teste-123")
+        group = MuscleGroup.objects.create(name="Perfil", slug="perfil")
+        exercise = Exercise.objects.create(
+            name="Exercício de perfil", primary_muscle_group=group
+        )
+        exercise.muscle_groups.add(group)
+        empty_workout = Workout.objects.create(user=user, date="2026-08-22")
+        filled_workout = Workout.objects.create(user=user, date="2026-08-23")
+        WorkoutExercise.objects.create(
+            workout=filled_workout,
+            exercise=exercise,
+            muscle_group=group,
+            order=1,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("accounts:profile"))
+
+        self.assertEqual(response.context["workout_count"], 1)
+        self.assertTrue(Workout.objects.filter(pk=empty_workout.pk).exists())
