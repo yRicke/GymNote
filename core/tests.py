@@ -361,6 +361,56 @@ class WorkoutFlowTests(TestCase):
         self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
         self.assertFalse(ExerciseSet.objects.exists())
 
+    def test_workout_day_exercise_removal_uses_modal_and_returns_json(self):
+        workout, entry = self.create_entry()
+        url = reverse(
+            "core:remove_exercise",
+            kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+        )
+
+        page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        response = self.client.post(
+            url,
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertContains(page, 'data-dialog-open="delete-dialog"')
+        self.assertContains(page, f'data-delete-url="{url}"')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
+
+    def test_set_deletion_uses_modal_and_returns_json(self):
+        _, entry = self.create_entry()
+        exercise_set = ExerciseSet.objects.create(
+            workout_exercise=entry,
+            order=1,
+            weight_kg=80,
+            reps=8,
+        )
+        url = reverse("core:delete_set", kwargs={"pk": exercise_set.pk})
+
+        page = self.client.get(
+            reverse(
+                "core:workout_exercise",
+                kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+            )
+        )
+        response = self.client.post(
+            url,
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertContains(page, f'data-delete-url="{url}"')
+        self.assertContains(page, "Excluir série 1?")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "Série excluída.")
+        self.assertFalse(ExerciseSet.objects.filter(pk=exercise_set.pk).exists())
+
     def test_exercise_detail_checks_owner_and_date(self):
         _, entry = self.create_entry(user=self.other_user)
         response = self.client.get(
@@ -511,6 +561,51 @@ class PersonalizationTests(TestCase):
         self.assertEqual(exercise.primary_muscle_group, self.chest)
         self.assertEqual(list(exercise.muscle_groups.all()), [self.chest])
 
+    def test_personalization_renders_quick_create_and_delete_dialogs(self):
+        custom = self.create_custom()
+        delete_url = reverse(
+            "core:personalization_exercise_delete", kwargs={"pk": custom.pk}
+        )
+
+        response = self.client.get(reverse("core:personalization"))
+
+        self.assertContains(response, 'data-dialog-open="create-exercise-dialog"')
+        self.assertContains(response, 'id="create-exercise-dialog"')
+        self.assertContains(response, 'id="delete-dialog"')
+        self.assertContains(response, f'data-delete-url="{delete_url}"')
+        self.assertContains(response, "Nome do exercício")
+        self.assertContains(response, "Grupo ou modalidade")
+
+    def test_quick_create_exercise_returns_json_and_reuses_validation(self):
+        url = reverse("core:personalization_exercise_create")
+        headers = {
+            "HTTP_ACCEPT": "application/json",
+            "HTTP_X_REQUESTED_WITH": "XMLHttpRequest",
+        }
+
+        success = self.client.post(
+            url,
+            {"name": "Crucifixo no cabo", "muscle_group": self.chest.pk},
+            **headers,
+        )
+        duplicate = self.client.post(
+            url,
+            {"name": "crucifixo no cabo", "muscle_group": self.triceps.pk},
+            **headers,
+        )
+        exercise = Exercise.objects.get(name="Crucifixo no cabo")
+
+        self.assertEqual(success.status_code, 201)
+        self.assertTrue(success.json()["ok"])
+        self.assertEqual(success.json()["exercise_id"], exercise.pk)
+        self.assertEqual(exercise.primary_muscle_group, self.chest)
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertIn("name", duplicate.json()["errors"])
+        self.assertEqual(
+            Exercise.objects.filter(user=self.user, name__iexact="Crucifixo no cabo").count(),
+            1,
+        )
+
     def test_changing_custom_group_updates_presets_but_not_history(self):
         custom = self.create_custom()
         preset = self.create_preset(entries=[custom])
@@ -545,14 +640,32 @@ class PersonalizationTests(TestCase):
             order=1,
         )
 
-        self.client.post(
-            reverse("core:personalization_exercise_delete", kwargs={"pk": custom.pk})
+        response = self.client.post(
+            reverse("core:personalization_exercise_delete", kwargs={"pk": custom.pk}),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
         custom.refresh_from_db()
 
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
         self.assertFalse(custom.is_active)
         self.assertTrue(WorkoutExercise.objects.filter(pk=history.pk).exists())
         self.assertFalse(preset.exercise_entries.exists())
+
+    def test_user_cannot_delete_another_users_exercise_asynchronously(self):
+        foreign = self.create_custom(user=self.other_user)
+
+        response = self.client.post(
+            reverse(
+                "core:personalization_exercise_delete", kwargs={"pk": foreign.pk}
+            ),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Exercise.objects.filter(pk=foreign.pk, is_active=True).exists())
 
     def test_create_preset_accepts_multiple_groups_and_order(self):
         response = self.client.post(
@@ -589,11 +702,39 @@ class PersonalizationTests(TestCase):
         self.assertFalse(WorkoutPreset.objects.filter(name="Inválida").exists())
 
     def test_preset_list_reports_group_and_exercise_counts(self):
-        self.create_preset(entries=[self.system_chest, self.system_triceps])
+        preset = self.create_preset(entries=[self.system_chest, self.system_triceps])
         response = self.client.get(reverse("core:personalization_presets"))
 
         self.assertContains(response, "2 grupos")
         self.assertContains(response, "2 exercícios")
+        self.assertContains(response, 'data-dialog-open="delete-dialog"')
+        self.assertContains(
+            response,
+            f'data-delete-url="{reverse("core:personalization_preset_delete", kwargs={"pk": preset.pk})}"',
+        )
+
+    def test_preset_deletion_returns_json_and_is_isolated_by_user(self):
+        preset = self.create_preset(entries=[self.system_chest])
+        foreign = WorkoutPreset.objects.create(user=self.other_user, name="Privada")
+        headers = {
+            "HTTP_ACCEPT": "application/json",
+            "HTTP_X_REQUESTED_WITH": "XMLHttpRequest",
+        }
+
+        response = self.client.post(
+            reverse("core:personalization_preset_delete", kwargs={"pk": preset.pk}),
+            **headers,
+        )
+        foreign_response = self.client.post(
+            reverse("core:personalization_preset_delete", kwargs={"pk": foreign.pk}),
+            **headers,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(foreign_response.status_code, 404)
+        self.assertFalse(WorkoutPreset.objects.filter(pk=preset.pk).exists())
+        self.assertTrue(WorkoutPreset.objects.filter(pk=foreign.pk).exists())
 
     def test_save_workout_as_preset_preserves_full_order_and_historical_group(self):
         multigroup = create_exercise(
@@ -656,7 +797,7 @@ class PersonalizationTests(TestCase):
 
         self.assertContains(response, 'data-dialog-open="save-preset-dialog"')
         self.assertContains(response, 'data-dialog-open="load-preset-dialog"')
-        self.assertContains(response, '<dialog class="preset-dialog"', count=2)
+        self.assertContains(response, '<dialog class="preset-dialog', count=3)
         self.assertContains(response, "1 exercício")
         self.assertContains(response, "1 grupo")
         self.assertContains(response, 'name="preset_id"')
