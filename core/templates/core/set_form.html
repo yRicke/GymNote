@@ -11,9 +11,7 @@
 {% block content %}
 <div class="page-shell page-shell--narrow">
     <section class="page-heading">
-        <p class="eyebrow">{{ exercise_set.workout_exercise.exercise.name }}</p>
         <h1>Editar {% if form.is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}</h1>
-        <p>Ajuste os dados registrados.</p>
     </section>
     <section class="panel">
         <form method="post" class="app-form">

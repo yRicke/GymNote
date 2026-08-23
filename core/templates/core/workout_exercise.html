@@ -11,7 +11,6 @@
 {% block content %}
 <div class="page-shell workout-log">
     <section class="page-heading">
-        <p class="eyebrow">{{ workout_exercise.muscle_group.name }} · {{ workout_exercise.workout.date|date:"d/m" }}</p>
         <h1>{{ workout_exercise.exercise.name }}</h1>
         <div class="metrics-row">
             {% if is_cardio %}
