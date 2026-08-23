@@ -51,7 +51,7 @@
                                 {% endif %}
                                 <td class="set-actions">
                                     <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
-                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
+                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_set' pk=exercise_set.pk %}" data-delete-title="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}?" data-delete-copy="Esta ação remove permanentemente os dados registrados."><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -89,5 +89,7 @@
             <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</button>
         </form>
     </section>
+
+    {% include "core/includes/delete_dialog.html" %}
 </div>
 {% endblock %}

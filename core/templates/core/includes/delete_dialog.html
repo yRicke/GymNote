@@ -1,0 +1,18 @@
+<dialog class="preset-dialog delete-dialog" id="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-copy">
+    <div class="preset-dialog__surface">
+        <div class="preset-dialog__heading">
+            <span class="preset-dialog__icon preset-dialog__icon--danger material-symbols-outlined" aria-hidden="true">delete</span>
+            <div><p class="eyebrow eyebrow--danger">Ação permanente</p><h2 id="delete-dialog-title" data-delete-dialog-title>Confirmar exclusão</h2></div>
+            <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <p class="preset-dialog__copy" id="delete-dialog-copy" data-delete-dialog-copy>Confirme para excluir este item.</p>
+        <form class="app-form" method="post" data-dialog-form data-delete-dialog-form>
+            {% csrf_token %}
+            <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
+            <div class="preset-dialog__actions">
+                <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                <button class="button button--danger" type="submit" data-dialog-submit data-idle-text="Confirmar exclusão" data-loading-text="Excluindo…">Confirmar exclusão</button>
+            </div>
+        </form>
+    </div>
+</dialog>

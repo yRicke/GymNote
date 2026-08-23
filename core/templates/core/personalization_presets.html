@@ -37,7 +37,7 @@
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">edit</span>
                         </a>
-                        <a class="icon-button icon-button--danger" href="{% url 'core:personalization_preset_delete' pk=preset.pk %}" aria-label="Excluir {{ preset.name }}">
+                        <a class="icon-button icon-button--danger" href="{% url 'core:personalization_preset_delete' pk=preset.pk %}" aria-label="Excluir {{ preset.name }}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:personalization_preset_delete' pk=preset.pk %}" data-delete-title="Excluir {{ preset.name }}?" data-delete-copy="Os treinos já registrados não serão alterados.">
                             <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                         </a>
                     </article>
@@ -51,5 +51,7 @@
             </div>
         {% endif %}
     </section>
+
+    {% include "core/includes/delete_dialog.html" %}
 </div>
 {% endblock %}

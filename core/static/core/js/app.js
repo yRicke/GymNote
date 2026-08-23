@@ -144,8 +144,8 @@
     }
 
     const dialogOpeners = new Map();
-    const resetPresetDialog = (dialog) => {
-        const form = dialog.querySelector("[data-preset-dialog-form]");
+    const resetDialog = (dialog) => {
+        const form = dialog.querySelector("[data-dialog-form]");
         if (!form) return;
         form.reset();
         form.removeAttribute("aria-busy");
@@ -181,11 +181,20 @@
     };
 
     document.querySelectorAll("[data-dialog-open]").forEach((opener) => {
-        opener.addEventListener("click", () => {
+        opener.addEventListener("click", (event) => {
             const dialog = document.getElementById(opener.dataset.dialogOpen);
             if (!dialog || typeof dialog.showModal !== "function") return;
+            event.preventDefault();
             dialogOpeners.set(dialog, opener);
-            resetPresetDialog(dialog);
+            const deleteForm = dialog.querySelector("[data-delete-dialog-form]");
+            if (deleteForm && opener.dataset.deleteUrl) {
+                deleteForm.action = opener.dataset.deleteUrl;
+                dialog.querySelector("[data-delete-dialog-title]").textContent =
+                    opener.dataset.deleteTitle;
+                dialog.querySelector("[data-delete-dialog-copy]").textContent =
+                    opener.dataset.deleteCopy;
+            }
+            resetDialog(dialog);
             dialog.showModal();
             window.requestAnimationFrame(() => {
                 const firstField = dialog.querySelector(
@@ -204,7 +213,7 @@
             if (event.target === dialog) dialog.close();
         });
         dialog.addEventListener("close", () => {
-            resetPresetDialog(dialog);
+            resetDialog(dialog);
             dialogOpeners.get(dialog)?.focus({ preventScroll: true });
             dialogOpeners.delete(dialog);
         });
@@ -218,7 +227,7 @@
         });
     });
 
-    document.querySelectorAll("[data-preset-dialog-form]").forEach((form) => {
+    document.querySelectorAll("[data-dialog-form]").forEach((form) => {
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
             if (form.dataset.submitting === "true") return;

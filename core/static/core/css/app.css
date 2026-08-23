@@ -407,6 +407,8 @@ a.list-card:focus-visible,
 .preset-dialog__heading h2 { margin: 0; font-size: 1.25rem; }
 .preset-dialog__heading .eyebrow { margin-bottom: 2px; }
 .preset-dialog__icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 999px; background: var(--surface-highest); color: var(--accent); }
+.preset-dialog__icon--danger { background: var(--danger-container); color: var(--danger); }
+.eyebrow--danger { color: var(--danger); }
 .preset-dialog__copy { margin: 0 0 16px; color: var(--text-muted); font-size: .86rem; }
 .preset-dialog__summary { padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-lowest); color: var(--text-muted); font-size: .82rem; }
 .preset-dialog__summary strong { color: var(--text); }
@@ -423,6 +425,8 @@ a.list-card:focus-visible,
 .preset-option__body strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
 .preset-option__body small { color: var(--text-muted); font-size: .72rem; }
 .dialog-alert { padding: 10px 12px; border-radius: var(--radius-md); background: var(--danger-container); color: var(--danger); font-size: .78rem; }
+.delete-dialog .button--danger { background: var(--danger-container); }
+.delete-dialog .button--danger:hover { background: #542024; }
 
 @keyframes dialog-enter {
     from { opacity: 0; transform: translateY(8px) scale(.985); }
@@ -703,7 +707,8 @@ a.list-card:focus-visible,
     .preset-dialog__surface { max-height: calc(100dvh - 18px); padding: 20px 18px max(20px, env(safe-area-inset-bottom)); border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
     .preset-dialog[open] { animation-name: dialog-sheet-enter; }
     .preset-dialog__actions { grid-template-columns: 1fr; }
-    .preset-dialog__actions .button--primary { grid-row: 1; }
+    .preset-dialog__actions .button--primary,
+    .preset-dialog__actions .button--danger { grid-row: 1; }
     .workout-summary-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
     .workout-summary-table tr { display: grid; grid-template-columns: 1fr 1fr; padding: 13px 14px; gap: 5px 12px; border-top: 1px solid var(--surface-highest); }
     .workout-summary-table tr:first-child { border-top: 0; }

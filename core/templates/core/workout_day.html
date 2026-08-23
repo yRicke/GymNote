@@ -57,7 +57,7 @@
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>
-                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}" aria-label="Excluir {{ workout_exercise.exercise.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
+                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}" aria-label="Excluir {{ workout_exercise.exercise.name }}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:remove_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}" data-delete-title="Excluir {{ workout_exercise.exercise.name }}?" data-delete-copy="Todas as séries registradas neste exercício também serão excluídas."><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                     </article>
                 {% endfor %}
             </div>
@@ -101,7 +101,7 @@
                 </div>
                 <p class="preset-dialog__copy">Dê um nome para salvar todos os exercícios e a ordem atual.</p>
                 <div class="preset-dialog__summary"><strong>{{ workout_exercise_count }}</strong> exercício{{ workout_exercise_count|pluralize:"s" }} <span aria-hidden="true">·</span> <strong>{{ workout_group_count }}</strong> grupo{{ workout_group_count|pluralize:"s" }}</div>
-                <form class="app-form" method="post" action="{% url 'core:save_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-preset-dialog-form>
+                <form class="app-form" method="post" action="{% url 'core:save_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-dialog-form>
                     {% csrf_token %}
                     <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
                     <div class="field">
@@ -126,7 +126,7 @@
                     <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
                 </div>
                 <p class="preset-dialog__copy">Os exercícios que ainda não estão no treino serão adicionados ao final.</p>
-                <form class="app-form" method="post" action="{% url 'core:load_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-preset-dialog-form data-preset-selection-form>
+                <form class="app-form" method="post" action="{% url 'core:load_workout_preset' date_str=workout_date|date:'Y-m-d' %}" data-dialog-form data-preset-selection-form>
                     {% csrf_token %}
                     <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
                     <div class="preset-options" role="radiogroup" aria-label="Escolha uma predefinição">
@@ -146,5 +146,7 @@
             </div>
         </dialog>
     {% endif %}
+
+    {% include "core/includes/delete_dialog.html" %}
 </div>
 {% endblock %}

@@ -65,7 +65,7 @@ def _wants_json(request):
 def _form_errors_json(form):
     return {
         field: [error["message"] for error in errors]
-        for field, errors in form.errors.get_json_data(escape_html=True).items()
+        for field, errors in form.errors.get_json_data(escape_html=False).items()
     }
 
 
@@ -228,6 +228,7 @@ def personalization(request):
         {
             "custom_exercises": custom_exercises,
             "exercise_groups": exercise_groups,
+            "quick_exercise_form": CustomExerciseForm(user=request.user),
             "active_personalization_tab": "exercises",
         },
     )
@@ -240,9 +241,20 @@ def custom_exercise_create(request):
         user=request.user,
     )
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Exercício personalizado criado.")
+        exercise = form.save()
+        message = "Exercício personalizado criado."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse(
+                {"ok": True, "message": message, "exercise_id": exercise.pk},
+                status=201,
+            )
         return redirect("core:personalization")
+    if request.method == "POST" and _wants_json(request):
+        return JsonResponse(
+            {"ok": False, "errors": _form_errors_json(form)},
+            status=400,
+        )
     return render(
         request,
         "core/custom_exercise_form.html",
@@ -297,7 +309,10 @@ def custom_exercise_delete(request, pk):
                 exercise.save(update_fields=["is_active"])
             else:
                 exercise.delete()
-        messages.success(request, "Exercício personalizado excluído.")
+        message = "Exercício personalizado excluído."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect("core:personalization")
     return render(
         request,
@@ -412,7 +427,10 @@ def workout_preset_delete(request, pk):
     )
     if request.method == "POST":
         preset.delete()
-        messages.success(request, "Predefinição de treino excluída.")
+        message = "Predefinição de treino excluída."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect("core:personalization_presets")
     return render(
         request,
@@ -739,7 +757,10 @@ def remove_exercise(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
     if request.method == "POST":
         workout_exercise.delete()
-        messages.success(request, "Exercício removido.")
+        message = "Exercício removido."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect("core:workout_day", date_str=date_str)
 
     return render(
@@ -862,10 +883,14 @@ def delete_set(request, pk):
         workout_exercise__workout__user=request.user,
     )
     if request.method == "POST":
+        is_cardio = exercise_set.workout_exercise.muscle_group.is_cardio
         workout_exercise_id = exercise_set.workout_exercise_id
         workout_date = exercise_set.workout_exercise.workout.date
         exercise_set.delete()
-        messages.success(request, "Série excluída.")
+        message = "Registro de cardio excluído." if is_cardio else "Série excluída."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect(
             "core:workout_exercise",
             date_str=workout_date.isoformat(),
