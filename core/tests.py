@@ -640,6 +640,163 @@ class PersonalizationTests(TestCase):
             ],
         )
 
+    def test_workout_day_renders_compact_preset_actions_and_dialogs(self):
+        workout = Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+        self.create_preset(entries=[self.system_chest, self.system_triceps])
+
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+
+        self.assertContains(response, 'data-dialog-open="save-preset-dialog"')
+        self.assertContains(response, 'data-dialog-open="load-preset-dialog"')
+        self.assertContains(response, '<dialog class="preset-dialog"', count=2)
+        self.assertContains(response, "1 exercício")
+        self.assertContains(response, "1 grupo")
+        self.assertContains(response, 'name="preset_id"')
+        self.assertNotContains(response, "button--compact")
+        self.assertNotContains(response, "playlist_add_check")
+
+    def test_workout_day_hides_quick_actions_when_their_resources_are_absent(self):
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+
+        self.assertNotContains(response, 'data-dialog-open="save-preset-dialog"')
+        self.assertNotContains(response, 'data-dialog-open="load-preset-dialog"')
+
+    def test_quick_save_returns_json_and_preserves_order_and_historical_groups(self):
+        multigroup = create_exercise(
+            "Supino Fechado", self.chest, secondary_groups=[self.triceps]
+        )
+        workout = Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=multigroup,
+            muscle_group=self.triceps,
+            order=1,
+        )
+        WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=2,
+        )
+
+        response = self.client.post(
+            reverse(
+                "core:save_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"name": "Treino rápido"},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        preset = WorkoutPreset.objects.get(name="Treino rápido")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["preset_id"], preset.pk)
+        self.assertEqual(
+            list(
+                preset.exercise_entries.values_list(
+                    "exercise_id", "muscle_group_id", "order"
+                )
+            ),
+            [
+                (multigroup.pk, self.triceps.pk, 1),
+                (self.system_chest.pk, self.chest.pk, 2),
+            ],
+        )
+        page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        self.assertContains(page, 'Predefinição &quot;Treino rápido&quot; criada.')
+
+    def test_quick_save_rejects_duplicate_name_with_field_errors(self):
+        self.create_preset(name="Push A", entries=[self.system_chest])
+        workout = Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+
+        response = self.client.post(
+            reverse(
+                "core:save_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"name": "push a"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json()["errors"])
+        self.assertEqual(WorkoutPreset.objects.filter(user=self.user).count(), 1)
+
+    def test_quick_save_rejects_empty_or_another_users_workout(self):
+        Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        foreign_workout = Workout.objects.create(
+            user=self.other_user, date=date(2026, 8, 15)
+        )
+        WorkoutExercise.objects.create(
+            workout=foreign_workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+        headers = {
+            "HTTP_ACCEPT": "application/json",
+            "HTTP_X_REQUESTED_WITH": "XMLHttpRequest",
+        }
+
+        empty_response = self.client.post(
+            reverse(
+                "core:save_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"name": "Vazia"},
+            **headers,
+        )
+        foreign_response = self.client.post(
+            reverse(
+                "core:save_workout_preset", kwargs={"date_str": "2026-08-15"}
+            ),
+            {"name": "Privada"},
+            **headers,
+        )
+
+        self.assertEqual(empty_response.status_code, 404)
+        self.assertEqual(foreign_response.status_code, 404)
+        self.assertFalse(WorkoutPreset.objects.filter(name__in=["Vazia", "Privada"]).exists())
+
+    def test_quick_save_without_javascript_redirects_to_the_same_day(self):
+        workout = Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+
+        response = self.client.post(
+            reverse(
+                "core:save_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"name": "Fallback"},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"}),
+        )
+        self.assertTrue(WorkoutPreset.objects.filter(name="Fallback").exists())
+
     def test_loading_preset_merges_and_skips_duplicates(self):
         preset = self.create_preset(
             entries=[self.system_chest, self.system_triceps]
@@ -673,6 +830,36 @@ class PersonalizationTests(TestCase):
             [self.system_chest.pk, self.system_triceps.pk],
         )
 
+    def test_loading_preset_asynchronously_returns_json_and_message(self):
+        preset = self.create_preset(
+            entries=[self.system_chest, self.system_triceps]
+        )
+
+        response = self.client.post(
+            reverse(
+                "core:load_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"preset_id": preset.pk},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["added_count"], 2)
+        self.assertEqual(
+            list(
+                Workout.objects.get(user=self.user).workout_exercises.values_list(
+                    "exercise_id", flat=True
+                )
+            ),
+            [self.system_chest.pk, self.system_triceps.pk],
+        )
+        page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        self.assertContains(page, 'Predefinição &quot;Push A&quot; carregada com 2 exercícios.')
+
     def test_loading_preset_skips_inactive_exercise(self):
         preset = self.create_preset(entries=[self.system_chest])
         self.system_chest.is_active = False
@@ -697,6 +884,21 @@ class PersonalizationTests(TestCase):
             {"preset_id": foreign.pk},
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_user_cannot_load_another_users_preset_as_json(self):
+        foreign = WorkoutPreset.objects.create(user=self.other_user, name="Privada")
+        response = self.client.post(
+            reverse(
+                "core:load_workout_preset", kwargs={"date_str": "2026-08-14"}
+            ),
+            {"preset_id": foreign.pk},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(response.json()["ok"])
+        self.assertFalse(Workout.objects.exists())
 
 
 class SeedGymDataTests(TestCase):
