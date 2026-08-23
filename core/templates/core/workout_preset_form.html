@@ -3,9 +3,7 @@
 {% block title %}{{ page_title }} | GymNote{% endblock %}
 {% block header_leading %}
     <div class="app-header__leading">
-        <a class="icon-button" href="{% url 'core:personalization_presets' %}" aria-label="Voltar às predefinições">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-        </a>
+        <a class="icon-button" href="{% if return_url %}{{ return_url }}{% else %}{% url 'core:personalization_presets' %}{% endif %}" aria-label="Voltar"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
         <span class="brand">{{ page_title }}</span>
     </div>
 {% endblock %}
@@ -15,54 +13,42 @@
     <section class="page-heading">
         <p class="eyebrow eyebrow--accent">Montagem rápida</p>
         <h1>{{ page_title }}</h1>
-        <p>Escolha um grupo ou modalidade e os exercícios que devem ser sugeridos juntos.</p>
+        <p>{% if source_workout %}Dê um nome ao treino completo deste dia.{% else %}Combine exercícios de quaisquer grupos e modalidades.{% endif %}</p>
     </section>
 
     <section class="panel content-section">
-        <div class="section-heading">
-            <h2>1. Grupo ou modalidade</h2>
-            {% if selected_group %}<span class="pill">{{ selected_group.name }}</span>{% endif %}
-        </div>
-        <form method="get" class="app-form">
+        <form method="post" class="app-form">
+            {% csrf_token %}
+            {% if return_url %}<input type="hidden" name="return_to" value="{{ return_url }}">{% endif %}
+            {% if source_workout %}<input type="hidden" name="source_workout" value="{{ source_workout.pk }}">{% endif %}
+            {{ form.exercise_order }}
+            {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
             <div class="field">
-                {{ group_form.muscle_group.label_tag }}
-                {{ group_form.muscle_group }}
-                {% for error in group_form.muscle_group.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                {{ form.name.label_tag }}
+                {{ form.name }}
+                {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             </div>
-            <button class="button button--ghost button--full" type="submit">Escolher grupo</button>
+            <div class="field">
+                <span class="field-label">{{ form.exercises.label }}</span>
+                {% if source_workout %}
+                    <ol class="preset-card__exercises">
+                        {% for entry in source_workout.workout_exercises.all %}
+                            <li>{{ entry.exercise.name }} <span class="muted">· {{ entry.muscle_group.name }}</span></li>
+                        {% endfor %}
+                    </ol>
+                    {% for entry in source_workout.workout_exercises.all %}<input type="hidden" name="exercises" value="{{ entry.exercise_id }}">{% endfor %}
+                {% elif form.fields.exercises.queryset %}
+                    <div class="choice-list choice-list--exercises">{{ form.exercises }}</div>
+                {% else %}
+                    <div class="empty-state empty-state--compact"><p>Nenhum exercício disponível.</p></div>
+                {% endif %}
+                {% for error in form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="button-stack">
+                <button class="button button--primary button--full" type="submit">Salvar predefinição</button>
+                <a class="button button--ghost button--full" href="{% if return_url %}{{ return_url }}{% else %}{% url 'core:personalization_presets' %}{% endif %}">Cancelar</a>
+            </div>
         </form>
     </section>
-
-    {% if selected_group %}
-        <section class="panel content-section">
-            <div class="section-heading"><h2>2. Nome e exercícios</h2></div>
-            <form method="post" class="app-form">
-                {% csrf_token %}
-                <input type="hidden" name="muscle_group" value="{{ selected_group.pk }}">
-                {% if return_url %}<input type="hidden" name="return_to" value="{{ return_url }}">{% endif %}
-                {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
-                <div class="field">
-                    {{ form.name.label_tag }}
-                    {{ form.name }}
-                    {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="field">
-                    <span class="field-label">{{ form.exercises.label }}</span>
-                    {% if form.fields.exercises.queryset %}
-                        <div class="choice-list choice-list--exercises">{{ form.exercises }}</div>
-                    {% else %}
-                        <div class="empty-state empty-state--compact">
-                            <p>Nenhum exercício disponível para {{ selected_group.name }}.</p>
-                        </div>
-                    {% endif %}
-                    {% for error in form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                </div>
-                <div class="button-stack">
-                    <button class="button button--primary button--full" type="submit">Salvar predefinição</button>
-                    <a class="button button--ghost button--full" href="{% url 'core:personalization_presets' %}">Cancelar</a>
-                </div>
-            </form>
-        </section>
-    {% endif %}
 </div>
 {% endblock %}

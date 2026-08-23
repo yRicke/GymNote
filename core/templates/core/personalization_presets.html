@@ -33,7 +33,7 @@
                             <span class="list-card__icon material-symbols-outlined" aria-hidden="true">playlist_add_check</span>
                             <span class="list-card__body">
                                 <strong>{{ preset.name }}</strong>
-                                <small>{{ preset.muscle_group.name }} · {{ preset.exercise_count }} exercício{{ preset.exercise_count|pluralize:"s" }}</small>
+                                <small>{{ preset.group_count }} grupo{{ preset.group_count|pluralize:"s" }} · {{ preset.exercise_count }} exercício{{ preset.exercise_count|pluralize:"s" }}</small>
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">edit</span>
                         </a>
@@ -47,7 +47,7 @@
             <div class="empty-state">
                 <span class="material-symbols-outlined" aria-hidden="true">playlist_add_check</span>
                 <h3>Nenhuma predefinição criada</h3>
-                <p>Salve combinações de exercícios para carregá-las ao adicionar um grupo ao treino.</p>
+                <p>Salve combinações de exercícios de diferentes grupos para montar seus treinos mais rápido.</p>
             </div>
         {% endif %}
     </section>
