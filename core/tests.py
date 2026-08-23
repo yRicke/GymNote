@@ -691,6 +691,40 @@ class PersonalizationTests(TestCase):
             ],
         )
 
+    def test_preset_form_separates_name_card_and_searchable_catalog(self):
+        response = self.client.get(reverse("core:personalization_preset_create"))
+
+        self.assertContains(response, 'class="panel preset-builder__card"', count=2)
+        self.assertContains(response, 'data-preset-builder')
+        self.assertContains(response, 'data-preset-exercise-search')
+        self.assertContains(response, 'placeholder="Buscar exercício por nome..."')
+        self.assertContains(response, 'data-preset-selected-count')
+        self.assertContains(response, 'data-preset-results-count')
+        self.assertContains(response, self.system_chest.name)
+        self.assertContains(response, self.system_triceps.name)
+
+    def test_edit_preset_renders_search_and_keeps_current_selections(self):
+        preset = self.create_preset(
+            entries=[self.system_triceps, self.system_chest]
+        )
+
+        response = self.client.get(
+            reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk})
+        )
+
+        self.assertContains(response, 'data-preset-exercise-search')
+        self.assertContains(
+            response,
+            f'value="{self.system_triceps.pk}" id="id_exercises_0" checked',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'value="{self.system_chest.pk}" id="id_exercises_1" checked',
+            html=False,
+        )
+        self.assertContains(response, "2 selecionados")
+
     def test_preset_rejects_another_users_custom_exercise(self):
         foreign = self.create_custom(user=self.other_user)
         response = self.client.post(
