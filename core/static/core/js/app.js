@@ -143,6 +143,78 @@
         });
     }
 
+    const presetBuilder = document.querySelector("[data-preset-builder]");
+    const presetOptions = presetBuilder?.querySelector(
+        "[data-preset-exercise-options]",
+    );
+    if (presetBuilder && presetOptions) {
+        const searchInput = presetBuilder.querySelector(
+            "[data-preset-exercise-search]",
+        );
+        const clearSearch = presetBuilder.querySelector(
+            "[data-preset-search-clear]",
+        );
+        const resultsCount = presetBuilder.querySelector(
+            "[data-preset-results-count]",
+        );
+        const selectedCount = presetBuilder.querySelector(
+            "[data-preset-selected-count]",
+        );
+        const status = presetBuilder.querySelector("[data-preset-search-status]");
+        const emptyState = presetBuilder.querySelector("[data-preset-search-empty]");
+        const normalize = (value) =>
+            value
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLocaleLowerCase("pt-BR")
+                .trim();
+        const exercises = [
+            ...presetOptions.querySelectorAll('input[name="exercises"]'),
+        ].map((input) => {
+            const label = input.closest("label");
+            return {
+                input,
+                row: label?.closest("li") || label?.parentElement,
+                name: normalize(label?.textContent.split("·")[0] || ""),
+            };
+        });
+
+        const updateSelectedCount = () => {
+            const count = exercises.filter(({ input }) => input.checked).length;
+            selectedCount.textContent = `${count} selecionado${count === 1 ? "" : "s"}`;
+        };
+        const filterExercises = () => {
+            const query = normalize(searchInput.value);
+            let visibleCount = 0;
+            exercises.forEach((exercise) => {
+                const visible = !query || exercise.name.includes(query);
+                exercise.row.hidden = !visible;
+                if (visible) visibleCount += 1;
+            });
+            resultsCount.textContent = `${visibleCount} exercício${visibleCount === 1 ? "" : "s"}`;
+            status.textContent = `${visibleCount} exercício${visibleCount === 1 ? "" : "s"} encontrado${visibleCount === 1 ? "" : "s"}.`;
+            emptyState.hidden = visibleCount !== 0;
+            clearSearch.hidden = !query;
+        };
+
+        searchInput.addEventListener("input", filterExercises);
+        searchInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") event.preventDefault();
+        });
+        clearSearch.addEventListener("click", () => {
+            searchInput.value = "";
+            filterExercises();
+            searchInput.focus();
+        });
+        presetOptions.addEventListener("change", (event) => {
+            if (event.target.matches('input[name="exercises"]')) {
+                updateSelectedCount();
+            }
+        });
+        updateSelectedCount();
+        filterExercises();
+    }
+
     const dialogOpeners = new Map();
     const resetDialog = (dialog) => {
         const form = dialog.querySelector("[data-dialog-form]");

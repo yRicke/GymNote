@@ -9,44 +9,69 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-shell page-shell--narrow">
+<div class="page-shell page-shell--narrow preset-builder">
     <section class="page-heading">
         <h1>{{ page_title }}</h1>
     </section>
 
-    <section class="panel content-section">
-        <form method="post" class="app-form">
-            {% csrf_token %}
-            {% if return_url %}<input type="hidden" name="return_to" value="{{ return_url }}">{% endif %}
-            {% if source_workout %}<input type="hidden" name="source_workout" value="{{ source_workout.pk }}">{% endif %}
-            {{ form.exercise_order }}
-            {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+    <form method="post" class="preset-builder__form" data-preset-builder>
+        {% csrf_token %}
+        {% if return_url %}<input type="hidden" name="return_to" value="{{ return_url }}">{% endif %}
+        {% if source_workout %}<input type="hidden" name="source_workout" value="{{ source_workout.pk }}">{% endif %}
+        {{ form.exercise_order }}
+        {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+
+        <section class="panel preset-builder__card" aria-labelledby="preset-identity-title">
+            <div class="section-heading preset-builder__heading">
+                <h2 id="preset-identity-title">Predefinição</h2>
+                <span class="metric-icon material-symbols-outlined" aria-hidden="true">edit_note</span>
+            </div>
             <div class="field">
                 {{ form.name.label_tag }}
                 {{ form.name }}
                 {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             </div>
+        </section>
+
+        <section class="panel preset-builder__card" aria-labelledby="preset-exercises-title">
+            <div class="section-heading preset-builder__heading">
+                <h2 id="preset-exercises-title">Exercícios</h2>
+                <span class="pill" data-preset-selected-count>
+                    {% if source_workout %}{{ source_workout.workout_exercises.count }}{% else %}{{ form.exercises.value|length|default:0 }}{% endif %} selecionado{% if source_workout %}{{ source_workout.workout_exercises.count|pluralize:"s" }}{% else %}{{ form.exercises.value|length|pluralize:"s" }}{% endif %}
+                </span>
+            </div>
             <div class="field">
-                <span class="field-label">{{ form.exercises.label }}</span>
                 {% if source_workout %}
-                    <ol class="preset-card__exercises">
+                    <ol class="preset-card__exercises preset-builder__source-list">
                         {% for entry in source_workout.workout_exercises.all %}
                             <li>{{ entry.exercise.name }} <span class="muted">· {{ entry.muscle_group.name }}</span></li>
                         {% endfor %}
                     </ol>
                     {% for entry in source_workout.workout_exercises.all %}<input type="hidden" name="exercises" value="{{ entry.exercise_id }}">{% endfor %}
                 {% elif form.fields.exercises.queryset %}
-                    <div class="choice-list choice-list--exercises">{{ form.exercises }}</div>
+                    <div class="search-form preset-builder__search" role="search">
+                        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                        <label class="sr-only" for="preset-exercise-search">Buscar exercício por nome</label>
+                        <input id="preset-exercise-search" type="search" placeholder="Buscar exercício por nome..." autocomplete="off" data-preset-exercise-search>
+                        <button class="icon-button" type="button" data-preset-search-clear hidden aria-label="Limpar busca"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+                    </div>
+                    <div class="preset-builder__catalog-meta">
+                        <span data-preset-results-count>{{ form.fields.exercises.queryset|length }} exercício{{ form.fields.exercises.queryset|length|pluralize:"s" }}</span>
+                        <span class="sr-only" data-preset-search-status aria-live="polite"></span>
+                    </div>
+                    <div class="choice-list choice-list--exercises preset-builder__choices" data-preset-exercise-options>{{ form.exercises }}</div>
+                    <div class="empty-state empty-state--compact preset-builder__empty" data-preset-search-empty hidden><span class="material-symbols-outlined" aria-hidden="true">search_off</span><p>Nenhum exercício encontrado.</p></div>
                 {% else %}
                     <div class="empty-state empty-state--compact"><p>Nenhum exercício disponível.</p></div>
                 {% endif %}
                 {% for error in form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             </div>
-            <div class="button-stack">
-                <button class="button button--primary button--full" type="submit">Salvar predefinição</button>
-                <a class="button button--ghost button--full" href="{% if return_url %}{{ return_url }}{% else %}{% url 'core:personalization_presets' %}{% endif %}">Cancelar</a>
-            </div>
-        </form>
-    </section>
+        </section>
+
+        <div class="button-stack preset-builder__actions">
+            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">save</span> Salvar predefinição</button>
+            <a class="button button--ghost button--full" href="{% if return_url %}{{ return_url }}{% else %}{% url 'core:personalization_presets' %}{% endif %}">Cancelar</a>
+        </div>
+    </form>
 </div>
 {% endblock %}
