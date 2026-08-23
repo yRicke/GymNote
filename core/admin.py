@@ -6,7 +6,6 @@ from .models import (
     MuscleGroup,
     Workout,
     WorkoutExercise,
-    WorkoutMuscleGroup,
     WorkoutPreset,
     WorkoutPresetExercise,
 )
@@ -22,8 +21,8 @@ class MuscleGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "is_active")
-    list_filter = ("is_active", "muscle_groups", "user")
+    list_display = ("name", "primary_muscle_group", "user", "is_active")
+    list_filter = ("is_active", "primary_muscle_group", "muscle_groups", "user")
     search_fields = ("name", "user__username", "user__email")
     filter_horizontal = ("muscle_groups",)
 
@@ -35,8 +34,7 @@ class WorkoutPresetExerciseInline(admin.TabularInline):
 
 @admin.register(WorkoutPreset)
 class WorkoutPresetAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "muscle_group", "updated_at")
-    list_filter = ("muscle_group",)
+    list_display = ("name", "user", "updated_at")
     search_fields = ("name", "user__username", "user__email")
     inlines = (WorkoutPresetExerciseInline,)
 
@@ -49,20 +47,14 @@ class WorkoutAdmin(admin.ModelAdmin):
     date_hierarchy = "date"
 
     def has_add_permission(self, request):
-        # O treino nasce junto com seu primeiro grupo pelo fluxo da aplicação.
+        # O treino nasce junto com seu primeiro exercício pelo fluxo da aplicação.
         return False
-
-
-@admin.register(WorkoutMuscleGroup)
-class WorkoutMuscleGroupAdmin(admin.ModelAdmin):
-    list_display = ("workout", "muscle_group", "order")
-    list_filter = ("muscle_group",)
 
 
 @admin.register(WorkoutExercise)
 class WorkoutExerciseAdmin(admin.ModelAdmin):
-    list_display = ("exercise", "workout_muscle_group", "order", "created_at")
-    list_filter = ("exercise",)
+    list_display = ("exercise", "workout", "muscle_group", "order", "created_at")
+    list_filter = ("muscle_group", "exercise")
 
 
 @admin.register(ExerciseSet)

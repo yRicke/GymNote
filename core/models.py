@@ -42,6 +42,11 @@ class Exercise(models.Model):
     )
     name = models.CharField(max_length=150)
     muscle_groups = models.ManyToManyField(MuscleGroup, related_name="exercises")
+    primary_muscle_group = models.ForeignKey(
+        MuscleGroup,
+        on_delete=models.PROTECT,
+        related_name="primary_exercises",
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -74,11 +79,6 @@ class WorkoutPreset(models.Model):
         related_name="workout_presets",
     )
     name = models.CharField(max_length=120)
-    muscle_group = models.ForeignKey(
-        MuscleGroup,
-        on_delete=models.PROTECT,
-        related_name="workout_presets",
-    )
     exercises = models.ManyToManyField(
         Exercise,
         through="WorkoutPresetExercise",
@@ -97,7 +97,7 @@ class WorkoutPreset(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} - {self.muscle_group}"
+        return f"{self.name} - {self.user}"
 
 
 class WorkoutPresetExercise(models.Model):
@@ -110,6 +110,11 @@ class WorkoutPresetExercise(models.Model):
         Exercise,
         on_delete=models.PROTECT,
         related_name="preset_entries",
+    )
+    muscle_group = models.ForeignKey(
+        MuscleGroup,
+        on_delete=models.PROTECT,
+        related_name="preset_exercise_entries",
     )
     order = models.PositiveIntegerField()
 
@@ -130,7 +135,7 @@ class WorkoutPresetExercise(models.Model):
         errors = {}
         if self.preset_id and self.exercise_id:
             if not self.exercise.muscle_groups.filter(
-                pk=self.preset.muscle_group_id
+                pk=self.muscle_group_id
             ).exists():
                 errors["exercise"] = "O exercício não pertence ao grupo da predefinição."
             if self.exercise.user_id not in (None, self.preset.user_id):
@@ -165,39 +170,9 @@ class Workout(models.Model):
         return f"{self.user} - {self.date:%d/%m/%Y}"
 
 
-class WorkoutMuscleGroup(models.Model):
+class WorkoutExercise(models.Model):
     workout = models.ForeignKey(
         Workout,
-        on_delete=models.CASCADE,
-        related_name="workout_muscle_groups",
-    )
-    muscle_group = models.ForeignKey(
-        MuscleGroup,
-        on_delete=models.PROTECT,
-        related_name="workout_entries",
-    )
-    order = models.PositiveIntegerField()
-
-    class Meta:
-        ordering = ["order"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["workout", "muscle_group"],
-                name="unique_muscle_group_per_workout",
-            ),
-            models.UniqueConstraint(
-                fields=["workout", "order"],
-                name="unique_muscle_group_order_per_workout",
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.workout} - {self.muscle_group}"
-
-
-class WorkoutExercise(models.Model):
-    workout_muscle_group = models.ForeignKey(
-        WorkoutMuscleGroup,
         on_delete=models.CASCADE,
         related_name="workout_exercises",
     )
@@ -206,6 +181,11 @@ class WorkoutExercise(models.Model):
         on_delete=models.PROTECT,
         related_name="workout_entries",
     )
+    muscle_group = models.ForeignKey(
+        MuscleGroup,
+        on_delete=models.PROTECT,
+        related_name="workout_exercise_entries",
+    )
     order = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -213,17 +193,28 @@ class WorkoutExercise(models.Model):
         ordering = ["order"]
         constraints = [
             models.UniqueConstraint(
-                fields=["workout_muscle_group", "exercise"],
-                name="unique_exercise_per_workout_muscle_group",
+                fields=["workout", "exercise"],
+                name="unique_exercise_per_workout",
             ),
             models.UniqueConstraint(
-                fields=["workout_muscle_group", "order"],
-                name="unique_exercise_order_per_workout_muscle_group",
+                fields=["workout", "order"],
+                name="unique_exercise_order_per_workout",
             ),
         ]
 
     def __str__(self):
-        return f"{self.exercise} - {self.workout_muscle_group}"
+        return f"{self.exercise} - {self.workout}"
+
+    def clean(self):
+        errors = {}
+        if self.exercise_id and self.muscle_group_id:
+            if not self.exercise.muscle_groups.filter(pk=self.muscle_group_id).exists():
+                errors["muscle_group"] = "O grupo deve estar associado ao exercício."
+        if self.exercise_id and self.workout_id:
+            if self.exercise.user_id not in (None, self.workout.user_id):
+                errors["exercise"] = "O exercício não está disponível para este usuário."
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def working_set_count(self):
@@ -292,16 +283,15 @@ class RateLimitCounter(models.Model):
         return f"{self.key[:12]}… ({self.count})"
 
 
-@receiver(post_delete, sender=WorkoutMuscleGroup)
-def delete_empty_workout_after_group_removal(
+@receiver(post_delete, sender=WorkoutExercise)
+def delete_empty_workout_after_exercise_removal(
     sender, instance, origin=None, **kwargs
 ):
-    """Remove o treino quando seus grupos forem removidos diretamente."""
+    """Remove o treino quando seus exercícios forem removidos diretamente."""
     origin_model = getattr(origin, "model", origin.__class__ if origin else None)
-    if origin_model is not WorkoutMuscleGroup:
+    if origin_model is not WorkoutExercise:
         return
 
     Workout.objects.filter(
-        pk=instance.workout_id,
-        workout_muscle_groups__isnull=True,
+        pk=instance.workout_id, workout_exercises__isnull=True
     ).delete()

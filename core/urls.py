@@ -46,34 +46,19 @@ urlpatterns = [
     ),
     path("treino/<str:date_str>/", views.workout_day, name="workout_day"),
     path(
-        "treino/<str:date_str>/grupos/adicionar/",
-        views.add_muscle_groups,
-        name="add_muscle_groups",
-    ),
-    path(
-        "treino/<str:date_str>/grupo/<int:pk>/remover/",
-        views.remove_muscle_group,
-        name="remove_muscle_group",
-    ),
-    path(
-        "treino/<str:date_str>/grupo/<int:pk>/predefinicao/",
-        views.workout_group_preset_offer,
-        name="workout_group_preset_offer",
-    ),
-    path(
-        "treino/<str:date_str>/grupo/<int:pk>/",
-        views.muscle_group_detail,
-        name="muscle_group",
-    ),
-    path(
-        "treino/<str:date_str>/grupo/<int:pk>/exercicios/adicionar/",
+        "treino/<str:date_str>/exercicios/adicionar/",
         views.add_exercises,
         name="add_exercises",
     ),
     path(
-        "treino/<str:date_str>/grupo/<int:pk>/exercicios/reordenar/",
+        "treino/<str:date_str>/exercicios/reordenar/",
         views.reorder_exercises,
         name="reorder_exercises",
+    ),
+    path(
+        "treino/<str:date_str>/predefinicoes/carregar/",
+        views.load_workout_preset,
+        name="load_workout_preset",
     ),
     path(
         "treino/<str:date_str>/exercicio/<int:pk>/",

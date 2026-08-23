@@ -219,7 +219,10 @@ class Command(BaseCommand):
             exercise, _ = Exercise.objects.update_or_create(
                 name=exercise_name,
                 user=None,
-                defaults={"is_active": True},
+                defaults={
+                    "is_active": True,
+                    "primary_muscle_group": related_groups[0],
+                },
             )
             exercise.muscle_groups.set(related_groups)
 
