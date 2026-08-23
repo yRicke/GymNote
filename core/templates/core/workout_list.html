@@ -44,7 +44,7 @@
                         <span class="list-card__icon material-symbols-outlined" aria-hidden="true">event_available</span>
                         <span class="list-card__body">
                             <strong>{{ workout.date|date:"d \d\e F \d\e Y" }}</strong>
-                            <small>{% for workout_group in workout.workout_muscle_groups.all %}{{ workout_group.muscle_group.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</small>
+                            <small>{% for group_name in workout.group_names %}{{ group_name }}{% if not forloop.last %} · {% endif %}{% endfor %}</small>
                         </span>
                         <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                     </a>
@@ -59,7 +59,7 @@
                         <p>Não há treinos com os grupos ou modalidades selecionados.</p>
                     {% else %}
                         <h3>Nenhum treino registrado</h3>
-                        <p>Escolha um dia no calendário e adicione seu primeiro grupo muscular.</p>
+                        <p>Escolha um dia no calendário e adicione seu primeiro exercício.</p>
                     {% endif %}
                 </div>
                 {% if selected_groups %}

@@ -3,7 +3,7 @@
 {% block title %}{{ workout_exercise.exercise.name }} | GymNote{% endblock %}
 {% block header_leading %}
     <div class="app-header__leading">
-        <a class="icon-button" href="{% url 'core:muscle_group' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.workout_muscle_group.pk %}" aria-label="Voltar ao grupo muscular"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <a class="icon-button" href="{% url 'core:workout_day' date_str=workout_exercise.workout.date|date:'Y-m-d' %}" aria-label="Voltar ao treino do dia"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
         <span class="brand">{% include "includes/logo_mark.html" %}<span>{% if is_cardio %}Registrar cardio{% else %}Registrar séries{% endif %}</span></span>
     </div>
 {% endblock %}
@@ -11,7 +11,7 @@
 {% block content %}
 <div class="page-shell workout-log">
     <section class="page-heading">
-        <p class="eyebrow">{{ workout_exercise.workout_muscle_group.muscle_group.name }} · {{ workout_exercise.workout_muscle_group.workout.date|date:"d/m" }}</p>
+        <p class="eyebrow">{{ workout_exercise.muscle_group.name }} · {{ workout_exercise.workout.date|date:"d/m" }}</p>
         <h1>{{ workout_exercise.exercise.name }}</h1>
         <div class="metrics-row">
             {% if is_cardio %}
@@ -65,7 +65,7 @@
 
     <section class="content-section panel set-entry">
         <div class="section-heading"><div><p class="eyebrow eyebrow--accent">{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}</p><h2>Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</h2></div><span class="material-symbols-outlined" aria-hidden="true">add_circle</span></div>
-        <form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout_muscle_group.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" class="app-form">
+        <form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" class="app-form">
             {% csrf_token %}
             {{ set_form.non_field_errors }}
             {% if is_cardio %}

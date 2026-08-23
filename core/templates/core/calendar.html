@@ -29,11 +29,11 @@
             {% for week in weeks %}
                 {% for cell in week %}
                     {% if cell.in_month %}
-                        <a class="calendar-day {% if cell.is_today %}is-today{% endif %} {% if cell.has_workout_groups %}has-workout{% endif %}"
+                        <a class="calendar-day {% if cell.is_today %}is-today{% endif %} {% if cell.has_workout %}has-workout{% endif %}"
                            href="{% url 'core:workout_day' date_str=cell.date|date:'Y-m-d' %}"
-                           aria-label="{{ cell.date|date:'d \d\e F' }}{% if cell.has_workout_groups %}, com treino registrado{% endif %}">
+                           aria-label="{{ cell.date|date:'d \d\e F' }}{% if cell.has_workout %}, com treino registrado{% endif %}">
                             <span>{{ cell.date.day }}</span>
-                            {% if cell.has_workout_groups %}<span class="calendar-day__dot" aria-hidden="true"></span>{% endif %}
+                            {% if cell.has_workout %}<span class="calendar-day__dot" aria-hidden="true"></span>{% endif %}
                         </a>
                     {% else %}
                         <span class="calendar-day calendar-day--empty" aria-hidden="true"></span>
@@ -49,8 +49,8 @@
                 <div>
                     <p class="eyebrow eyebrow--accent">Hoje</p>
                     {% if today_workout %}
-                        <h2>{% for group in today_workout.workout_muscle_groups.all %}{{ group.muscle_group.name }}{% if not forloop.last %} + {% endif %}{% empty %}Treino registrado{% endfor %}</h2>
-                        <p>{{ today_workout.workout_muscle_groups.count }} grupo{{ today_workout.workout_muscle_groups.count|pluralize:"s" }} muscular{{ today_workout.workout_muscle_groups.count|pluralize:"es" }}</p>
+                        <h2>{% for group_name in today_group_names %}{{ group_name }}{% if not forloop.last %} + {% endif %}{% empty %}Treino registrado{% endfor %}</h2>
+                        <p>{{ today_workout.exercise_count }} exercício{{ today_workout.exercise_count|pluralize:"s" }}</p>
                     {% else %}
                         <h2>Pronto para treinar?</h2>
                         <p>Abra o dia e registre o treino no seu ritmo.</p>

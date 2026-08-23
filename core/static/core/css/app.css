@@ -386,6 +386,12 @@ a.list-card:focus-visible,
 .drag-handle .material-symbols-outlined { font-size: 22px; }
 .save-preset-button { margin-top: 12px; }
 
+.table-wrap { width: 100%; overflow-x: auto; border-radius: var(--radius-md); background: var(--surface-lowest); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { padding: 12px 14px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: .62rem; font-weight: 500; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+.data-table td { padding: 14px; border-top: 1px solid var(--surface-highest); font-size: .84rem; }
+.data-table td:last-child strong { color: var(--accent); }
+
 .empty-state {
     padding: 30px 22px;
     border: 1px dashed var(--outline);
@@ -651,6 +657,11 @@ a.list-card:focus-visible,
     .form-grid--three .field:first-child { grid-column: 1 / -1; }
     .page-heading--split h1 { font-size: 1.8rem; }
     .panel { padding: 18px 16px; }
+    .workout-summary-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    .workout-summary-table tr { display: grid; grid-template-columns: 1fr 1fr; padding: 13px 14px; gap: 5px 12px; border-top: 1px solid var(--surface-highest); }
+    .workout-summary-table tr:first-child { border-top: 0; }
+    .workout-summary-table td { padding: 0; border: 0; }
+    .workout-summary-table td:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 370px) {

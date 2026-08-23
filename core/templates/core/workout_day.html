@@ -3,71 +3,97 @@
 {% block title %}Treino {{ workout_date|date:"d/m/Y" }} | GymNote{% endblock %}
 {% block header_leading %}
     <div class="app-header__leading">
-        <a class="icon-button" href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}" aria-label="Voltar ao calendário">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-        </a>
-        <a class="brand" href="{% url 'core:workouts' %}">{% include "includes/logo_mark.html" %}<span>Treinos</span></a>
+        <a class="icon-button" href="{% url 'core:calendar' %}?year={{ workout_date.year }}&month={{ workout_date.month }}" aria-label="Voltar ao calendário"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></a>
+        <a class="brand" href="{% url 'core:workouts' %}">{% include "includes/logo_mark.html" %}<span>Treino do dia</span></a>
     </div>
 {% endblock %}
 
 {% block content %}
 <div class="page-shell">
-    <section class="page-heading page-heading--center">
+    <section class="page-heading">
         <p class="eyebrow">Treino do dia</p>
         <h1>{{ workout_date|date:"l, d \d\e F" }}</h1>
-        {% if workout_groups %}
-            <p>{% for workout_group in workout_groups %}{{ workout_group.muscle_group.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
-        {% else %}
-            <p>Adicione grupos musculares ou cardio para começar.</p>
-        {% endif %}
+        <p>Escolha os exercícios e registre suas séries no seu ritmo.</p>
     </section>
 
+    {% if group_summaries %}
+        <section class="content-section panel">
+            <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Resumo</p><h2>Grupos e modalidades</h2></div><span class="pill">{{ group_summaries|length }} grupo{{ group_summaries|length|pluralize:"s" }}</span></div>
+            <div class="table-wrap">
+                <table class="data-table workout-summary-table">
+                    <thead><tr><th>Grupo/modalidade</th><th>Volume</th><th>Resultado</th></tr></thead>
+                    <tbody>
+                        {% for summary in group_summaries %}
+                            <tr>
+                                <td data-label="Grupo/modalidade"><strong>{{ summary.muscle_group__name }}</strong></td>
+                                {% if summary.muscle_group__tracking_type == "cardio" %}
+                                    <td data-label="Volume">{{ summary.record_count }} registro{{ summary.record_count|pluralize:"s" }}</td>
+                                    <td data-label="Resultado"><strong>{{ summary.cardio_minutes }} min</strong></td>
+                                {% else %}
+                                    <td data-label="Volume">{{ summary.record_count }} série{{ summary.record_count|pluralize:"s" }}</td>
+                                    <td data-label="Resultado"><strong>{{ summary.working_set_count }} válida{{ summary.working_set_count|pluralize:"s" }}</strong></td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
+
     <section class="content-section">
-        <div class="section-heading">
-            <h2>Grupos e modalidades</h2>
-            {% if workout_groups %}<span class="pill">{{ workout_groups|length }} grupo{{ workout_groups|length|pluralize:"s" }}</span>{% endif %}
-        </div>
-        {% if workout_groups %}
-            <div class="stack-list">
-                {% for workout_group in workout_groups %}
-                    <article class="list-card list-card--actions">
-                        <a class="list-card__main" href="{% url 'core:muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}">
-                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if workout_group.muscle_group.is_cardio %}directions_run{% else %}exercise{% endif %}</span>
+        <div class="section-heading"><h2>Seu treino</h2>{% if added_exercises %}<span class="pill">{{ added_exercises|length }} exercício{{ added_exercises|length|pluralize:"s" }}</span>{% endif %}</div>
+        {% if added_exercises %}
+            <div class="stack-list reorderable-list" data-reorder-list data-reorder-url="{% url 'core:reorder_exercises' date_str=workout_date|date:'Y-m-d' %}">
+                <input type="hidden" data-csrf-token value="{{ csrf_token }}">
+                {% for workout_exercise in added_exercises %}
+                    <article class="list-card list-card--actions reorderable-item" data-reorder-id="{{ workout_exercise.pk }}" draggable="true">
+                        <button class="drag-handle icon-button" type="button" aria-label="Arrastar {{ workout_exercise.exercise.name }} para mudar a ordem" title="Arraste para reordenar"><span class="material-symbols-outlined" aria-hidden="true">drag_indicator</span></button>
+                        <a class="list-card__main" href="{% url 'core:workout_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}">
+                            <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if workout_exercise.muscle_group.is_cardio %}directions_run{% else %}fitness_center{% endif %}</span>
                             <span class="list-card__body">
-                                <strong>{{ workout_group.muscle_group.name }}</strong>
-                                <small>{% if workout_group.muscle_group.is_cardio %}{{ workout_group.exercise_count }} atividade{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.cardio_minutes }} min registrado{{ workout_group.cardio_minutes|pluralize:"s" }}{% else %}{{ workout_group.exercise_count }} exercício{{ workout_group.exercise_count|pluralize:"s" }} e {{ workout_group.working_set_count }} série{{ workout_group.working_set_count|pluralize:"s" }} válida{{ workout_group.working_set_count|pluralize:"s" }}{% endif %}</small>
+                                <strong>{{ workout_exercise.exercise.name }}</strong>
+                                <small>{{ workout_exercise.muscle_group.name }} · {% if workout_exercise.muscle_group.is_cardio %}{{ workout_exercise.record_count }} registro{{ workout_exercise.record_count|pluralize:"s" }} · {{ workout_exercise.cardio_minutes }} min{% else %}{{ workout_exercise.working_sets }} série{{ workout_exercise.working_sets|pluralize:"s" }} válida{{ workout_exercise.working_sets|pluralize:"s" }}{% endif %}</small>
                             </span>
                             <span class="material-symbols-outlined list-card__chevron" aria-hidden="true">chevron_right</span>
                         </a>
-                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_muscle_group' date_str=workout_date|date:'Y-m-d' pk=workout_group.pk %}" aria-label="Excluir {{ workout_group.muscle_group.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
+                        <a class="icon-button icon-button--danger" href="{% url 'core:remove_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}" aria-label="Excluir {{ workout_exercise.exercise.name }}"><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                     </article>
                 {% endfor %}
             </div>
+            <p class="reorder-status sr-only" data-reorder-status aria-live="polite"></p>
+            <a class="button button--ghost button--full save-preset-button" href="{{ save_preset_url }}"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</a>
         {% else %}
-            <div class="empty-state">
-                <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
-                <h3>Nenhum grupo adicionado</h3>
-                <p>Escolha abaixo o que você vai treinar hoje.</p>
+            <div class="empty-state"><span class="material-symbols-outlined" aria-hidden="true">fitness_center</span><h3>Nenhum exercício adicionado</h3><p>Use o catálogo abaixo para montar o treino deste dia.</p></div>
+        {% endif %}
+    </section>
+
+    {% if presets %}
+        <section class="content-section panel">
+            <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Montagem rápida</p><h2>Carregar predefinição</h2></div><span class="material-symbols-outlined" aria-hidden="true">playlist_add_check</span></div>
+            <div class="stack-list">
+                {% for preset in presets %}
+                    <article class="list-card list-card--actions">
+                        <span class="list-card__main"><span class="list-card__icon material-symbols-outlined" aria-hidden="true">playlist_add_check</span><span class="list-card__body"><strong>{{ preset.name }}</strong><small>{{ preset.group_count }} grupo{{ preset.group_count|pluralize:"s" }} · {{ preset.exercise_count }} exercício{{ preset.exercise_count|pluralize:"s" }}</small></span></span>
+                        <form method="post" action="{% url 'core:load_workout_preset' date_str=workout_date|date:'Y-m-d' %}">{% csrf_token %}<input type="hidden" name="preset_id" value="{{ preset.pk }}"><button class="button button--primary button--compact" type="submit">Carregar</button></form>
+                    </article>
+                {% endfor %}
             </div>
-        {% endif %}
-    </section>
+        </section>
+    {% endif %}
 
-    <section class="content-section panel">
-        <div class="section-heading">
-            <div><p class="eyebrow eyebrow--accent">Montar treino</p><h2>Adicionar grupos</h2></div>
-            <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
-        </div>
-        {% if add_group_form.fields.muscle_groups.queryset %}
-            <form method="post" action="{% url 'core:add_muscle_groups' date_str=workout_date|date:'Y-m-d' %}" class="selection-form">
-                {% csrf_token %}
-                <div class="choice-list">{{ add_group_form.muscle_groups }}</div>
-                {% for error in add_group_form.muscle_groups.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
-            </form>
-        {% else %}
-            <p class="muted">Todos os grupos disponíveis já fazem parte deste treino.</p>
-        {% endif %}
+    <section class="content-section panel exercise-search-region" data-exercise-search-region>
+        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Catálogo</p><h2>Adicionar exercícios</h2></div><span class="pill" data-search-count>{{ exercise_count }} {% if exercise_count == 1 %}disponível{% else %}disponíveis{% endif %}</span></div>
+        <form class="search-form" method="get" action="{% url 'core:workout_day' date_str=workout_date|date:'Y-m-d' %}" role="search" data-live-search>
+            <label class="sr-only" for="id_q">Pesquisar exercício</label><span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Buscar exercício...">
+            <a href="{% url 'core:workout_day' date_str=workout_date|date:'Y-m-d' %}" data-search-clear {% if not query %}hidden{% endif %} aria-label="Limpar busca"><span class="material-symbols-outlined">close</span></a>
+        </form>
+        <p class="search-form__status sr-only" data-search-status aria-live="polite">A busca é atualizada enquanto você digita.</p>
+        <form method="post" action="{% url 'core:add_exercises' date_str=workout_date|date:'Y-m-d' %}" class="selection-form" data-exercise-selection-form>
+            {% csrf_token %}<div class="exercise-results" data-exercise-results>{% include "core/includes/exercise_catalog_results.html" %}</div><div data-preserved-selections></div>
+            <button class="button button--primary button--full" type="submit" data-exercise-submit><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
+        </form>
     </section>
-
 </div>
 {% endblock %}
