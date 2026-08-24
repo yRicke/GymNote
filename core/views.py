@@ -415,6 +415,10 @@ def workout_preset_create(request):
             "page_title": "Nova predefinição",
             "return_url": return_url,
             "source_workout": source_workout,
+            "quick_exercise_form": CustomExerciseForm(
+                user=request.user,
+                auto_id="id_quick_exercise_%s",
+            ),
         },
     )
 
@@ -442,6 +446,10 @@ def workout_preset_edit(request, pk):
             "form": form,
             "page_title": "Editar predefinição",
             "preset": preset,
+            "quick_exercise_form": CustomExerciseForm(
+                user=request.user,
+                auto_id="id_quick_exercise_%s",
+            ),
         },
     )
 

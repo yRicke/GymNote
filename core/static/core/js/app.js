@@ -30,6 +30,7 @@
         const searchUrl = searchRegion.dataset.catalogSearchUrl;
         const selectedExerciseIds = new Set();
         const selectionOrder = [];
+        let committedSelectionOrder = [];
         let activeRequest = null;
         let requestSequence = 0;
         let pendingFocusId = null;
@@ -179,9 +180,24 @@
             searchInput.value = "";
             clearSearch.hidden = true;
             readDefaultSelections();
+            const defaultOrder = [...selectionOrder];
+            selectionOrder.splice(0);
+            committedSelectionOrder.forEach((exerciseId) => {
+                if (selectedExerciseIds.has(exerciseId)) selectionOrder.push(exerciseId);
+            });
+            defaultOrder.forEach((exerciseId) => {
+                if (!selectionOrder.includes(exerciseId)) selectionOrder.push(exerciseId);
+            });
             if (searchUrl) performSearch();
             else filterLocalOptions();
             updateSelectionButton();
+        };
+        const commitDraft = () => {
+            optionInputs().forEach((input) => {
+                input.defaultChecked = selectedExerciseIds.has(input.value);
+                input.checked = input.defaultChecked;
+            });
+            committedSelectionOrder = [...selectionOrder];
         };
 
         searchInput.addEventListener("input", scheduleSearch);
@@ -221,6 +237,7 @@
         }
 
         readDefaultSelections();
+        committedSelectionOrder = [...selectionOrder];
         updateSelectionButton();
         if (!searchUrl) filterLocalOptions();
         catalogControllers.set(dialog, {
@@ -230,79 +247,91 @@
             selectionOrder,
             restoreSelections,
             focusPendingExercise,
+            optionInputs,
+            commitDraft,
         });
     });
 
     const presetBuilder = document.querySelector("[data-preset-builder]");
-    const presetOptions = presetBuilder?.querySelector(
-        "[data-preset-exercise-options]",
-    );
-    if (presetBuilder && presetOptions) {
-        const searchInput = presetBuilder.querySelector(
-            "[data-preset-exercise-search]",
+    const presetCatalogDialog = presetBuilder?.querySelector("#exercise-catalog-dialog");
+    const presetCatalog = catalogControllers.get(presetCatalogDialog);
+    if (presetBuilder && presetCatalogDialog && presetCatalog) {
+        const orderInput = presetBuilder.querySelector('input[name="exercise_order"]');
+        const selectedList = presetBuilder.querySelector("[data-preset-selected-list]");
+        const selectedCount = presetBuilder.querySelector("[data-preset-selected-count]");
+        const emptyState = presetBuilder.querySelector("[data-preset-selection-empty]");
+        const confirmButton = presetCatalogDialog.querySelector("[data-catalog-confirm]");
+        const initialMetadata = new Map(
+            [...selectedList.querySelectorAll("[data-selected-exercise-id]")].map((item) => [
+                item.dataset.selectedExerciseId,
+                {
+                    name: item.querySelector("strong")?.textContent.trim() || "",
+                    group: item.querySelector("small")?.textContent.trim() || "",
+                },
+            ]),
         );
-        const clearSearch = presetBuilder.querySelector(
-            "[data-preset-search-clear]",
-        );
-        const resultsCount = presetBuilder.querySelector(
-            "[data-preset-results-count]",
-        );
-        const selectedCount = presetBuilder.querySelector(
-            "[data-preset-selected-count]",
-        );
-        const status = presetBuilder.querySelector("[data-preset-search-status]");
-        const emptyState = presetBuilder.querySelector("[data-preset-search-empty]");
-        const normalize = (value) =>
-            value
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLocaleLowerCase("pt-BR")
-                .trim();
-        const exercises = [
-            ...presetOptions.querySelectorAll('input[name="exercises"]'),
-        ].map((input) => {
-            const label = input.closest("label");
-            return {
-                input,
-                row: label?.closest("li") || label?.parentElement,
-                name: normalize(label?.textContent.split("·")[0] || ""),
-            };
-        });
-
-        const updateSelectedCount = () => {
-            const count = exercises.filter(({ input }) => input.checked).length;
-            selectedCount.textContent = `${count} selecionado${count === 1 ? "" : "s"}`;
+        const metadataForInput = (input) => {
+            const [name = "", group = ""] = (input.closest("label")?.textContent || "")
+                .split("·")
+                .map((part) => part.trim());
+            return { name, group };
         };
-        const filterExercises = () => {
-            const query = normalize(searchInput.value);
-            let visibleCount = 0;
-            exercises.forEach((exercise) => {
-                const visible = !query || exercise.name.includes(query);
-                exercise.row.hidden = !visible;
-                if (visible) visibleCount += 1;
+        const orderedSelectedIds = () => presetCatalog.selectionOrder.filter(
+            (exerciseId) => presetCatalog.selectedExerciseIds.has(exerciseId),
+        );
+        const renderSelection = () => {
+            const inputsById = new Map(
+                presetCatalog.optionInputs().map((input) => [input.value, input]),
+            );
+            const selectedIds = orderedSelectedIds();
+            selectedList.replaceChildren();
+            selectedIds.forEach((exerciseId) => {
+                const input = inputsById.get(exerciseId);
+                if (!input) return;
+                const metadata = initialMetadata.get(exerciseId) || metadataForInput(input);
+                const item = document.createElement("article");
+                item.className = "list-card preset-builder__selected-item";
+                item.dataset.selectedExerciseId = exerciseId;
+                const icon = document.createElement("span");
+                icon.className = "list-card__icon material-symbols-outlined";
+                icon.setAttribute("aria-hidden", "true");
+                icon.textContent = "fitness_center";
+                const body = document.createElement("span");
+                body.className = "list-card__body";
+                const name = document.createElement("strong");
+                name.textContent = metadata.name;
+                const group = document.createElement("small");
+                group.textContent = metadata.group;
+                body.append(name, group);
+                item.append(icon, body);
+                selectedList.append(item);
             });
-            resultsCount.textContent = `${visibleCount} exercício${visibleCount === 1 ? "" : "s"}`;
-            status.textContent = `${visibleCount} exercício${visibleCount === 1 ? "" : "s"} encontrado${visibleCount === 1 ? "" : "s"}.`;
-            emptyState.hidden = visibleCount !== 0;
-            clearSearch.hidden = !query;
+            selectedList.hidden = selectedIds.length === 0;
+            emptyState.hidden = selectedIds.length !== 0;
+            selectedCount.textContent = `${selectedIds.length} selecionado${selectedIds.length === 1 ? "" : "s"}`;
+            orderInput.value = selectedIds.join(",");
         };
 
-        searchInput.addEventListener("input", filterExercises);
-        searchInput.addEventListener("keydown", (event) => {
-            if (event.key === "Enter") event.preventDefault();
+        const submittedOrder = orderInput.value
+            .split(",")
+            .filter((exerciseId) => presetCatalog.selectedExerciseIds.has(exerciseId));
+        presetCatalog.selectionOrder.forEach((exerciseId) => {
+            if (
+                presetCatalog.selectedExerciseIds.has(exerciseId)
+                && !submittedOrder.includes(exerciseId)
+            ) submittedOrder.push(exerciseId);
         });
-        clearSearch.addEventListener("click", () => {
-            searchInput.value = "";
-            filterExercises();
-            searchInput.focus();
+        presetCatalog.selectionOrder.splice(0, presetCatalog.selectionOrder.length, ...submittedOrder);
+        presetCatalog.commitDraft();
+
+        confirmButton.addEventListener("click", () => {
+            presetCatalog.commitDraft();
+            renderSelection();
+            presetCatalogDialog.close("confirmed");
         });
-        presetOptions.addEventListener("change", (event) => {
-            if (event.target.matches('input[name="exercises"]')) {
-                updateSelectedCount();
-            }
+        presetBuilder.addEventListener("submit", () => {
+            orderInput.value = orderedSelectedIds().join(",");
         });
-        updateSelectedCount();
-        filterExercises();
     }
 
     const dialogOpeners = new Map();
@@ -400,6 +429,9 @@
         });
         dialog.addEventListener("close", () => {
             if (dialog.returnValue === "nested") return;
+            if (dialog.returnValue !== "confirmed") {
+                catalogControllers.get(dialog)?.resetDraft();
+            }
             resetDialog(dialog);
             const parentDialog = dialogParents.get(dialog);
             if (parentDialog) {

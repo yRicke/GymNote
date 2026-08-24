@@ -280,6 +280,56 @@ class WorkoutPresetForm(WorkoutPresetNameForm):
                 "primary_muscle_group__order", "name"
             )
         self.fields["exercises"].queryset = available_exercises
+        selected_ids = list(initial_ids)
+        if self.is_bound:
+            available_ids = set(available_exercises.values_list("pk", flat=True))
+            submitted_ids = []
+            for raw_id in self.data.getlist("exercises"):
+                try:
+                    exercise_id = int(raw_id)
+                except (TypeError, ValueError):
+                    continue
+                if exercise_id in available_ids and exercise_id not in submitted_ids:
+                    submitted_ids.append(exercise_id)
+            submitted_id_set = set(submitted_ids)
+            selected_ids = []
+            for raw_id in self.data.get("exercise_order", "").split(","):
+                try:
+                    exercise_id = int(raw_id)
+                except (TypeError, ValueError):
+                    continue
+                if (
+                    exercise_id in submitted_id_set
+                    and exercise_id not in selected_ids
+                ):
+                    selected_ids.append(exercise_id)
+            selected_ids.extend(
+                exercise_id
+                for exercise_id in submitted_ids
+                if exercise_id not in selected_ids
+            )
+
+        exercises_by_id = {
+            exercise.pk: exercise for exercise in available_exercises
+        }
+        group_ids = {
+            self.entry_groups.get(exercise_id)
+            or exercises_by_id[exercise_id].primary_muscle_group_id
+            for exercise_id in selected_ids
+            if exercise_id in exercises_by_id
+        }
+        groups_by_id = MuscleGroup.objects.in_bulk(group_ids)
+        self.selected_exercise_rows = [
+            {
+                "exercise": exercises_by_id[exercise_id],
+                "muscle_group": groups_by_id[
+                    self.entry_groups.get(exercise_id)
+                    or exercises_by_id[exercise_id].primary_muscle_group_id
+                ],
+            }
+            for exercise_id in selected_ids
+            if exercise_id in exercises_by_id
+        ]
         if not self.is_bound and initial_ids:
             self.fields["exercises"].initial = initial_ids
             self.fields["exercise_order"].initial = ",".join(map(str, initial_ids))

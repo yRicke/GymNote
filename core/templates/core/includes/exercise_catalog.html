@@ -13,7 +13,7 @@
     <div class="search-form exercise-catalog__search" role="search" data-live-search>
         <label class="sr-only" for="{{ catalog_search_id }}">Pesquisar exercício</label>
         <span class="material-symbols-outlined" aria-hidden="true">search</span>
-        <input id="{{ catalog_search_id }}" type="search" value="{{ query|default:'' }}" placeholder="Buscar exercício..." autocomplete="off" data-catalog-search>
+        <input id="{{ catalog_search_id }}" type="search" value="{{ query|default:'' }}" placeholder="Buscar exercício por nome..." autocomplete="off" data-catalog-search>
         <button class="icon-button" type="button" data-search-clear {% if not query %}hidden{% endif %} aria-label="Limpar busca"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
     </div>
     <p class="search-form__status sr-only" data-search-status aria-live="polite">A busca é atualizada enquanto você digita.</p>
