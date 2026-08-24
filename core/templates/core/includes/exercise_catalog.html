@@ -1,0 +1,22 @@
+<div class="exercise-catalog" data-exercise-search-region data-catalog-mode="{{ catalog_mode }}"{% if catalog_search_url %} data-catalog-search-url="{{ catalog_search_url }}"{% endif %}>
+    <div class="exercise-catalog__toolbar">
+        <button class="button button--ghost button--compact exercise-catalog__new" type="button" data-nested-dialog-open="create-exercise-dialog" aria-label="Novo exercício">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Novo
+        </button>
+        <button class="icon-button" type="button" data-dialog-close aria-label="Fechar catálogo"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+    </div>
+    <div class="section-heading exercise-catalog__heading">
+        <div><p class="eyebrow eyebrow--accent">Catálogo</p><h2 id="{{ catalog_title_id }}">Adicionar exercícios</h2></div>
+        <span class="pill" data-search-count>{{ exercise_count }} {% if exercise_count == 1 %}disponível{% else %}disponíveis{% endif %}</span>
+    </div>
+    <div class="search-form exercise-catalog__search" role="search" data-live-search>
+        <label class="sr-only" for="{{ catalog_search_id }}">Pesquisar exercício</label>
+        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        <input id="{{ catalog_search_id }}" type="search" value="{{ query|default:'' }}" placeholder="Buscar exercício..." autocomplete="off" data-catalog-search>
+        <button class="icon-button" type="button" data-search-clear {% if not query %}hidden{% endif %} aria-label="Limpar busca"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+    </div>
+    <p class="search-form__status sr-only" data-search-status aria-live="polite">A busca é atualizada enquanto você digita.</p>
+    <div class="exercise-results exercise-catalog__results" data-exercise-results>{% include "core/includes/exercise_catalog_results.html" %}</div>
+    <div data-preserved-selections></div>
+</div>

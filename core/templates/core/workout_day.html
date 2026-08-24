@@ -63,31 +63,30 @@
         {% else %}
             <div class="empty-state"><span class="material-symbols-outlined" aria-hidden="true">fitness_center</span><h3>Nenhum exercício adicionado</h3><p>Use o botão de adicionar exercício para montar o treino deste dia.</p></div>
         {% endif %}
-        {% if added_exercises or presets %}
-            <div class="preset-actions">
-                {% if added_exercises %}
-                    <button class="button button--ghost button--full" type="button" data-dialog-open="save-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</button>
-                {% endif %}
-                {% if presets %}
-                    <button class="button button--preset-load button--full" type="button" data-dialog-open="load-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">playlist_play</span> Carregar predefinição</button>
-                {% endif %}
-            </div>
-        {% endif %}
+        <div class="preset-actions">
+            <button class="button button--primary button--full" type="button" data-dialog-open="exercise-catalog-dialog"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar exercício</button>
+            {% if added_exercises %}
+                <button class="button button--ghost button--full" type="button" data-dialog-open="save-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</button>
+            {% endif %}
+            {% if presets %}
+                <button class="button button--preset-load button--full" type="button" data-dialog-open="load-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">playlist_play</span> Carregar predefinição</button>
+            {% endif %}
+        </div>
     </section>
 
-    <section class="content-section panel exercise-search-region" data-exercise-search-region>
-        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">Catálogo</p><h2>Adicionar exercícios</h2></div><span class="pill" data-search-count>{{ exercise_count }} {% if exercise_count == 1 %}disponível{% else %}disponíveis{% endif %}</span></div>
-        <form class="search-form" method="get" action="{% url 'core:workout_day' date_str=workout_date|date:'Y-m-d' %}" role="search" data-live-search>
-            <label class="sr-only" for="id_q">Pesquisar exercício</label><span class="material-symbols-outlined" aria-hidden="true">search</span>
-            <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Buscar exercício...">
-            <a href="{% url 'core:workout_day' date_str=workout_date|date:'Y-m-d' %}" data-search-clear {% if not query %}hidden{% endif %} aria-label="Limpar busca"><span class="material-symbols-outlined">close</span></a>
+    <dialog class="preset-dialog exercise-catalog-dialog" id="exercise-catalog-dialog" aria-labelledby="exercise-catalog-title">
+        <form method="post" action="{% url 'core:add_exercises' date_str=workout_date|date:'Y-m-d' %}" class="preset-dialog__surface selection-form exercise-catalog__form" data-exercise-selection-form>
+            {% csrf_token %}
+            {% url 'core:workout_day' date_str=workout_date|date:'Y-m-d' as workout_catalog_search_url %}
+            {% include "core/includes/exercise_catalog.html" with catalog_mode="workout" catalog_title_id="exercise-catalog-title" catalog_search_id="workout-exercise-search" catalog_search_url=workout_catalog_search_url %}
+            <div class="preset-dialog__actions exercise-catalog__actions">
+                <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                <button class="button button--primary" type="submit" data-exercise-submit><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
+            </div>
         </form>
-        <p class="search-form__status sr-only" data-search-status aria-live="polite">A busca é atualizada enquanto você digita.</p>
-        <form method="post" action="{% url 'core:add_exercises' date_str=workout_date|date:'Y-m-d' %}" class="selection-form" data-exercise-selection-form>
-            {% csrf_token %}<div class="exercise-results" data-exercise-results>{% include "core/includes/exercise_catalog_results.html" %}</div><div data-preserved-selections></div>
-            <button class="button button--primary button--full" type="submit" data-exercise-submit><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar selecionados</button>
-        </form>
-    </section>
+    </dialog>
+
+    {% include "core/includes/custom_exercise_dialog.html" %}
 
     {% if added_exercises %}
         <dialog class="preset-dialog" id="save-preset-dialog" aria-labelledby="save-preset-title">

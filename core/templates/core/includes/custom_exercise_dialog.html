@@ -1,0 +1,26 @@
+<dialog class="preset-dialog" id="create-exercise-dialog" aria-labelledby="create-exercise-dialog-title">
+    <div class="preset-dialog__surface">
+        <div class="preset-dialog__heading">
+            <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true">add</span>
+            <div><p class="eyebrow eyebrow--accent">Catálogo pessoal</p><h2 id="create-exercise-dialog-title">Novo exercício</h2></div>
+            <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <p class="preset-dialog__copy">O exercício ficará disponível apenas para você.</p>
+        <form class="app-form" method="post" action="{% url 'core:personalization_exercise_create' %}" data-dialog-form data-exercise-create-form>
+            {% csrf_token %}
+            <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
+            <div class="field">
+                {{ quick_exercise_form.name.label_tag }}
+                {{ quick_exercise_form.name }}
+            </div>
+            <div class="field">
+                {{ quick_exercise_form.muscle_group.label_tag }}
+                {{ quick_exercise_form.muscle_group }}
+            </div>
+            <div class="preset-dialog__actions">
+                <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="Salvar exercício" data-loading-text="Salvando…">Salvar exercício</button>
+            </div>
+        </form>
+    </div>
+</dialog>

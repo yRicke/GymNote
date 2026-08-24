@@ -236,7 +236,10 @@ def personalization(request):
         {
             "custom_exercises": custom_exercises,
             "exercise_groups": exercise_groups,
-            "quick_exercise_form": CustomExerciseForm(user=request.user),
+            "quick_exercise_form": CustomExerciseForm(
+                user=request.user,
+                auto_id="id_quick_exercise_%s",
+            ),
             "active_personalization_tab": "exercises",
         },
     )
@@ -254,7 +257,24 @@ def custom_exercise_create(request):
         messages.success(request, message)
         if _wants_json(request):
             return JsonResponse(
-                {"ok": True, "message": message, "exercise_id": exercise.pk},
+                {
+                    "ok": True,
+                    "message": message,
+                    "exercise_id": exercise.pk,
+                    "exercise": {
+                        "id": exercise.pk,
+                        "name": exercise.name,
+                        "label": (
+                            f"{exercise.name} · "
+                            f"{exercise.primary_muscle_group.name} · Meu exercício"
+                        ),
+                        "group": {
+                            "id": exercise.primary_muscle_group_id,
+                            "name": exercise.primary_muscle_group.name,
+                            "order": exercise.primary_muscle_group.order,
+                        },
+                    },
+                },
                 status=201,
             )
         return redirect("core:personalization")
@@ -520,6 +540,10 @@ def workout_day(request, date_str):
         .order_by("name")
     )
     quick_preset_form = WorkoutPresetNameForm(user=request.user)
+    quick_exercise_form = CustomExerciseForm(
+        user=request.user,
+        auto_id="id_quick_exercise_%s",
+    )
     return render(
         request,
         "core/workout_day.html",
@@ -533,6 +557,7 @@ def workout_day(request, date_str):
             "query": query,
             "presets": presets,
             "quick_preset_form": quick_preset_form,
+            "quick_exercise_form": quick_exercise_form,
             "workout_exercise_count": added_exercises.count(),
             "workout_group_count": len(group_summaries),
         },

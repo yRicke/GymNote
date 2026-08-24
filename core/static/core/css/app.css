@@ -456,6 +456,18 @@ a.list-card:focus-visible,
 .preset-dialog__summary { padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-lowest); color: var(--text-muted); font-size: .82rem; }
 .preset-dialog__summary strong { color: var(--text); }
 .preset-dialog__actions { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 9px; }
+.exercise-catalog-dialog { width: min(calc(100% - 32px), 620px); max-width: 620px; }
+.exercise-catalog__form { display: grid; gap: 16px; }
+.exercise-catalog { display: grid; min-height: 0; }
+.exercise-catalog__toolbar { display: flex; margin-bottom: 12px; align-items: center; justify-content: space-between; gap: 12px; }
+.exercise-catalog__new { min-height: 38px; padding-inline: 12px; color: var(--accent); }
+.exercise-catalog__new .material-symbols-outlined { font-size: 18px; }
+.exercise-catalog__heading { margin-bottom: 12px; }
+.exercise-catalog__search { margin-bottom: 10px; }
+.exercise-catalog__search .icon-button { width: 34px; height: 34px; }
+.exercise-catalog__search [hidden] { display: none !important; }
+.exercise-catalog__results { max-height: min(48dvh, 460px); padding-right: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--outline) transparent; }
+.exercise-catalog__actions { margin-top: 0; }
 .preset-options { display: grid; max-height: min(42dvh, 340px); overflow-y: auto; gap: 8px; overscroll-behavior: contain; }
 .preset-option { position: relative; display: flex; min-height: 64px; padding: 10px 12px; align-items: center; gap: 11px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--surface-lowest); cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
 .preset-option:hover { border-color: var(--outline); }
@@ -753,6 +765,8 @@ a.list-card:focus-visible,
     .preset-dialog__actions { grid-template-columns: 1fr; }
     .preset-dialog__actions .button--primary,
     .preset-dialog__actions .button--danger { grid-row: 1; }
+    .exercise-catalog-dialog { width: 100%; max-width: none; }
+    .exercise-catalog__results { max-height: min(48dvh, 430px); }
     .workout-filter__groups > div,
     .workout-filter__groups ul { grid-template-columns: 1fr; }
     .workout-summary-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
