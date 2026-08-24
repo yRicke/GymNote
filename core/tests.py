@@ -353,6 +353,17 @@ class WorkoutFlowTests(TestCase):
         )
         self.assertContains(filled_response, "com treino registrado")
 
+    def test_calendar_explains_that_days_open_workouts(self):
+        response = self.client.get(
+            reverse("core:calendar"), {"year": 2026, "month": 8}
+        )
+
+        self.assertContains(response, 'class="calendar-hint"')
+        self.assertContains(
+            response,
+            "Clique ou toque em um dia para abrir ou registrar um treino.",
+        )
+
     def test_reorder_accepts_entries_from_any_group(self):
         workout = Workout.objects.create(user=self.user, date=self.workout_date)
         first = WorkoutExercise.objects.create(
@@ -656,6 +667,13 @@ class PersonalizationTests(TestCase):
         self.assertEqual(success.status_code, 201)
         self.assertTrue(success.json()["ok"])
         self.assertEqual(success.json()["exercise_id"], exercise.pk)
+        self.assertEqual(success.json()["exercise"]["id"], exercise.pk)
+        self.assertEqual(success.json()["exercise"]["name"], exercise.name)
+        self.assertEqual(success.json()["exercise"]["group"]["id"], self.chest.pk)
+        self.assertEqual(
+            success.json()["exercise"]["label"],
+            "Crucifixo no cabo · Peito · Meu exercício",
+        )
         self.assertEqual(exercise.primary_muscle_group, self.chest)
         self.assertEqual(duplicate.status_code, 400)
         self.assertIn("name", duplicate.json()["errors"])
@@ -754,10 +772,15 @@ class PersonalizationTests(TestCase):
 
         self.assertContains(response, 'class="panel preset-builder__card"', count=2)
         self.assertContains(response, 'data-preset-builder')
-        self.assertContains(response, 'data-preset-exercise-search')
+        self.assertContains(response, 'data-dialog-open="exercise-catalog-dialog"')
+        self.assertContains(response, 'id="exercise-catalog-dialog"')
+        self.assertContains(response, 'data-catalog-mode="preset"')
+        self.assertContains(response, 'data-catalog-search')
         self.assertContains(response, 'placeholder="Buscar exercício por nome..."')
         self.assertContains(response, 'data-preset-selected-count')
-        self.assertContains(response, 'data-preset-results-count')
+        self.assertContains(response, 'data-preset-selected-list')
+        self.assertContains(response, 'data-catalog-confirm')
+        self.assertContains(response, 'data-nested-dialog-open="create-exercise-dialog"')
         self.assertContains(response, self.system_chest.name)
         self.assertContains(response, self.system_triceps.name)
 
@@ -770,7 +793,7 @@ class PersonalizationTests(TestCase):
             reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk})
         )
 
-        self.assertContains(response, 'data-preset-exercise-search')
+        self.assertContains(response, 'data-catalog-search')
         self.assertContains(
             response,
             f'value="{self.system_triceps.pk}" id="id_exercises_0" checked',
@@ -780,6 +803,32 @@ class PersonalizationTests(TestCase):
             response,
             f'value="{self.system_chest.pk}" id="id_exercises_1" checked',
             html=False,
+        )
+        self.assertContains(response, "2 selecionados")
+        self.assertContains(
+            response,
+            f'data-selected-exercise-id="{self.system_triceps.pk}"',
+        )
+        self.assertContains(
+            response,
+            f'data-selected-exercise-id="{self.system_chest.pk}"',
+        )
+
+    def test_invalid_preset_rerenders_submitted_selection_and_order(self):
+        response = self.client.post(
+            reverse("core:personalization_preset_create"),
+            {
+                "name": "",
+                "exercises": [self.system_triceps.pk, self.system_chest.pk],
+                "exercise_order": f"{self.system_chest.pk},{self.system_triceps.pk}",
+            },
+        )
+
+        rows = response.context["form"].selected_exercise_rows
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["exercise"].pk for row in rows],
+            [self.system_chest.pk, self.system_triceps.pk],
         )
         self.assertContains(response, "2 selecionados")
 
@@ -860,6 +909,10 @@ class PersonalizationTests(TestCase):
         preset = WorkoutPreset.objects.get(name="Treino do dia")
 
         self.assertContains(form_response, first.exercise.name)
+        self.assertEqual(
+            form_response.context["form"].selected_exercise_rows[0]["muscle_group"],
+            self.triceps,
+        )
         self.assertEqual(save_response.status_code, 302)
         self.assertEqual(
             list(
@@ -889,11 +942,14 @@ class PersonalizationTests(TestCase):
 
         self.assertContains(response, 'data-dialog-open="save-preset-dialog"')
         self.assertContains(response, 'data-dialog-open="load-preset-dialog"')
-        self.assertContains(response, '<dialog class="preset-dialog', count=3)
+        self.assertContains(response, 'data-dialog-open="exercise-catalog-dialog"')
+        self.assertContains(response, 'id="exercise-catalog-dialog"')
+        self.assertContains(response, 'data-catalog-mode="workout"')
+        self.assertContains(response, '<dialog class="preset-dialog', count=5)
         self.assertContains(response, "1 exercício")
         self.assertContains(response, "1 grupo")
         self.assertContains(response, 'name="preset_id"')
-        self.assertNotContains(response, "button--compact")
+        self.assertContains(response, 'aria-label="Novo exercício"')
         self.assertNotContains(response, "playlist_add_check")
 
     def test_workout_day_hides_quick_actions_when_their_resources_are_absent(self):
@@ -901,6 +957,7 @@ class PersonalizationTests(TestCase):
             reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
         )
 
+        self.assertContains(response, 'data-dialog-open="exercise-catalog-dialog"')
         self.assertNotContains(response, 'data-dialog-open="save-preset-dialog"')
         self.assertNotContains(response, 'data-dialog-open="load-preset-dialog"')
 
