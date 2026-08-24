@@ -5,29 +5,29 @@ from .models import Exercise, WorkoutPreset, WorkoutPresetExercise
 
 DEFAULT_WORKOUT_PRESETS = (
     {
-        "name": "Treino A — Peito, ombros e tríceps",
+        "name": "Push",
         "exercises": (
             "Supino Reto com Barra",
             "Supino Inclinado com Halteres",
-            "Peck Deck",
             "Desenvolvimento com Halteres",
             "Elevação Lateral",
-            "Tríceps Corda",
+            "Tríceps na Polia",
+            "Tríceps Francês",
         ),
     },
     {
-        "name": "Treino B — Costas e bíceps",
+        "name": "Pull",
         "exercises": (
             "Puxada Alta",
             "Remada Baixa",
-            "Remada Unilateral",
+            "Remada Unilateral com Halter",
             "Face Pull",
-            "Rosca Direta",
+            "Rosca Direta com Barra",
             "Rosca Martelo",
         ),
     },
     {
-        "name": "Treino C — Pernas",
+        "name": "Legs",
         "exercises": (
             "Agachamento Livre",
             "Leg Press",
