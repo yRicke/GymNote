@@ -49,7 +49,7 @@
                                     <td data-label="Válida"><span class="working-mark {% if exercise_set.is_working_set %}is-active{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">check</span><span class="sr-only">{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</span></span></td>
                                 {% endif %}
                                 <td class="set-actions">
-                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
+                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="set-form-dialog" data-set-form-mode="edit" data-set-id="{{ exercise_set.pk }}" data-set-action="{% url 'core:edit_set' pk=exercise_set.pk %}" data-set-title="Editar {% if is_cardio %}registro{% else %}série{% endif %}" data-set-eyebrow="{% if is_cardio %}Registro{% else %}Série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
                                     <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_set' pk=exercise_set.pk %}" data-delete-title="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}?" data-delete-copy="Esta ação remove permanentemente os dados registrados."><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
                                 </td>
                             </tr>
@@ -62,33 +62,10 @@
         {% endif %}
     </section>
 
-    <section class="content-section panel set-entry">
-        <div class="section-heading"><div><p class="eyebrow eyebrow--accent">{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}</p><h2>Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</h2></div><span class="material-symbols-outlined" aria-hidden="true">add_circle</span></div>
-        <form method="post" action="{% url 'core:add_set' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" class="app-form">
-            {% csrf_token %}
-            {{ set_form.non_field_errors }}
-            {% if is_cardio %}
-                <div class="form-grid form-grid--three">
-                    <div class="field"><label for="{{ set_form.duration_minutes.id_for_label }}">{{ set_form.duration_minutes.label }}</label>{{ set_form.duration_minutes }}{% for error in set_form.duration_minutes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                    <div class="field"><label for="{{ set_form.distance_km.id_for_label }}">{{ set_form.distance_km.label }}</label>{{ set_form.distance_km }}{% for error in set_form.distance_km.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                    <div class="field"><label for="{{ set_form.perceived_exertion.id_for_label }}">{{ set_form.perceived_exertion.label }}</label>{{ set_form.perceived_exertion }}{% for error in set_form.perceived_exertion.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                </div>
-                <p class="help-text">Distância e esforço são opcionais; a duração é o único campo obrigatório.</p>
-            {% else %}
-                <div class="form-grid form-grid--three">
-                    <div class="field"><label for="{{ set_form.weight_kg.id_for_label }}">{{ set_form.weight_kg.label }}</label>{{ set_form.weight_kg }}{% for error in set_form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                    <div class="field"><label for="{{ set_form.reps.id_for_label }}">{{ set_form.reps.label }}</label>{{ set_form.reps }}{% for error in set_form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                    <div class="field"><label for="{{ set_form.partial_reps.id_for_label }}">Parciais</label>{{ set_form.partial_reps }}{% for error in set_form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
-                </div>
-                <label class="toggle-field" for="{{ set_form.is_working_set.id_for_label }}">
-                    <span><strong>Série válida</strong><small>Marque apenas séries de trabalho.</small></span>
-                    {{ set_form.is_working_set }}<span class="toggle" aria-hidden="true"></span>
-                </label>
-            {% endif %}
-            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</button>
-        </form>
-    </section>
+    <button class="button button--primary button--full" type="button" data-dialog-open="set-form-dialog" data-set-form-mode="add" data-set-action="{% url 'core:add_set' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" data-set-title="Adicionar {% if is_cardio %}registro{% else %}série{% endif %}" data-set-eyebrow="{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</button>
 
+    {{ exercise_set_values|json_script:"exercise-set-form-values" }}
+    {% include "core/includes/set_form_dialog.html" %}
     {% include "core/includes/delete_dialog.html" %}
 </div>
 {% endblock %}

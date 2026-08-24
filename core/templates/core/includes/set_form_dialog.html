@@ -1,0 +1,21 @@
+<dialog class="preset-dialog set-form-dialog" id="set-form-dialog" aria-labelledby="set-form-dialog-title"{% if open_set_dialog %} open data-dialog-auto-open{% endif %}>
+    <div class="preset-dialog__surface">
+        <div class="preset-dialog__heading">
+            <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true" data-set-dialog-icon>{% if editing_set %}edit{% else %}add{% endif %}</span>
+            <div>
+                <p class="eyebrow eyebrow--accent" data-set-dialog-eyebrow>{% if editing_set %}{% if is_cardio %}Registro {{ editing_set.order }}{% else %}Série {{ editing_set.order }}{% endif %}{% else %}{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}{% endif %}</p>
+                <h2 id="set-form-dialog-title" data-set-dialog-title>{% if editing_set %}Editar {% if is_cardio %}registro{% else %}série{% endif %}{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}</h2>
+            </div>
+            <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+        <form class="app-form" method="post" action="{% if editing_set %}{% url 'core:edit_set' pk=editing_set.pk %}{% else %}{% url 'core:add_set' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}{% endif %}" data-dialog-form data-set-form>
+            {% csrf_token %}
+            <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
+            {% include "core/includes/set_form_fields.html" with form=set_form %}
+            <div class="preset-dialog__actions">
+                <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}" data-loading-text="Salvando…">{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}</button>
+            </div>
+        </form>
+    </div>
+</dialog>

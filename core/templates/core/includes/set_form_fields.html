@@ -1,0 +1,19 @@
+{{ form.non_field_errors }}
+{% if form.is_cardio %}
+    <div class="form-grid form-grid--three">
+        <div class="field"><label for="{{ form.duration_minutes.id_for_label }}">{{ form.duration_minutes.label }}</label>{{ form.duration_minutes }}{% for error in form.duration_minutes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="field"><label for="{{ form.distance_km.id_for_label }}">{{ form.distance_km.label }}</label>{{ form.distance_km }}{% for error in form.distance_km.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="field"><label for="{{ form.perceived_exertion.id_for_label }}">{{ form.perceived_exertion.label }}</label>{{ form.perceived_exertion }}{% for error in form.perceived_exertion.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    </div>
+    <p class="help-text">Distância e esforço são opcionais; a duração é o único campo obrigatório.</p>
+{% else %}
+    <div class="form-grid form-grid--three">
+        <div class="field"><label for="{{ form.weight_kg.id_for_label }}">{{ form.weight_kg.label }}</label>{{ form.weight_kg }}{% for error in form.weight_kg.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="field"><label for="{{ form.reps.id_for_label }}">{{ form.reps.label }}</label>{{ form.reps }}{% for error in form.reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="field"><label for="{{ form.partial_reps.id_for_label }}">Parciais</label>{{ form.partial_reps }}{% for error in form.partial_reps.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>
+    </div>
+    <label class="toggle-field" for="{{ form.is_working_set.id_for_label }}">
+        <span><strong>Série válida</strong><small>Marque apenas séries de trabalho.</small></span>
+        {{ form.is_working_set }}<span class="toggle" aria-hidden="true"></span>
+    </label>
+{% endif %}

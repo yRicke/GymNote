@@ -534,6 +534,129 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(response.json()["message"], "Série excluída.")
         self.assertFalse(ExerciseSet.objects.filter(pk=exercise_set.pk).exists())
 
+    def test_set_add_and_edit_share_the_standard_dialog(self):
+        _, entry = self.create_entry()
+        exercise_set = ExerciseSet.objects.create(
+            workout_exercise=entry,
+            order=1,
+            weight_kg=80,
+            reps=8,
+            is_working_set=True,
+        )
+        add_url = reverse(
+            "core:add_set",
+            kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+        )
+        edit_url = reverse("core:edit_set", kwargs={"pk": exercise_set.pk})
+
+        response = self.client.get(
+            reverse(
+                "core:workout_exercise",
+                kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+            )
+        )
+
+        self.assertContains(response, 'id="set-form-dialog"', count=1)
+        self.assertContains(response, 'data-set-form-mode="add"')
+        self.assertContains(response, 'data-set-form-mode="edit"')
+        self.assertContains(response, f'data-set-action="{add_url}"')
+        self.assertContains(response, f'data-set-action="{edit_url}"')
+        self.assertContains(response, 'data-dialog-form data-set-form')
+        self.assertNotContains(response, 'class="content-section panel set-entry"')
+        javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        self.assertIn("configureSetDialog(dialog, opener)", javascript)
+        self.assertIn("exerciseSetValues[opener.dataset.setId]", javascript)
+        self.assertEqual(
+            response.context["exercise_set_values"][str(exercise_set.pk)],
+            {
+                "weight_kg": "80.00",
+                "reps": 8,
+                "partial_reps": "",
+                "duration_minutes": "",
+                "distance_km": "",
+                "perceived_exertion": "",
+                "is_working_set": True,
+            },
+        )
+
+    def test_edit_set_link_opens_prefilled_modal_in_exercise_page(self):
+        _, entry = self.create_entry()
+        exercise_set = ExerciseSet.objects.create(
+            workout_exercise=entry,
+            order=1,
+            weight_kg=72.5,
+            reps=10,
+        )
+
+        response = self.client.get(
+            reverse("core:edit_set", kwargs={"pk": exercise_set.pk})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "core/workout_exercise.html")
+        self.assertContains(response, "data-dialog-auto-open")
+        self.assertContains(
+            response,
+            f'action="{reverse("core:edit_set", kwargs={"pk": exercise_set.pk})}"',
+        )
+        self.assertEqual(response.context["editing_set"], exercise_set)
+        self.assertEqual(response.context["set_form"].instance, exercise_set)
+
+    def test_set_modal_create_and_edit_return_json(self):
+        _, entry = self.create_entry()
+        add_url = reverse(
+            "core:add_set",
+            kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+        )
+
+        created = self.client.post(
+            add_url,
+            {"weight_kg": "80", "reps": "8", "is_working_set": "on"},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        exercise_set = entry.sets.get()
+        edited = self.client.post(
+            reverse("core:edit_set", kwargs={"pk": exercise_set.pk}),
+            {"weight_kg": "82.5", "reps": "6"},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.json()["set_id"], exercise_set.pk)
+        self.assertEqual(edited.status_code, 200)
+        self.assertTrue(edited.json()["ok"])
+        exercise_set.refresh_from_db()
+        self.assertEqual(str(exercise_set.weight_kg), "82.50")
+        self.assertEqual(exercise_set.reps, 6)
+        self.assertFalse(exercise_set.is_working_set)
+
+    def test_invalid_set_submission_keeps_validation_in_open_modal(self):
+        _, entry = self.create_entry()
+        url = reverse(
+            "core:add_set",
+            kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+        )
+
+        json_response = self.client.post(
+            url,
+            {"weight_kg": "-1", "reps": "8"},
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        html_response = self.client.post(
+            url,
+            {"weight_kg": "-1", "reps": "8"},
+        )
+
+        self.assertEqual(json_response.status_code, 400)
+        self.assertIn("weight_kg", json_response.json()["errors"])
+        self.assertEqual(html_response.status_code, 400)
+        self.assertTemplateUsed(html_response, "core/workout_exercise.html")
+        self.assertContains(html_response, "data-dialog-auto-open", status_code=400)
+        self.assertContains(html_response, "Certifique-se que este valor", status_code=400)
+
     def test_exercise_detail_checks_owner_and_date(self):
         _, entry = self.create_entry(user=self.other_user)
         response = self.client.get(
@@ -582,6 +705,16 @@ class WorkoutFlowTests(TestCase):
         self.assertIsNone(strength_set.duration_minutes)
         self.assertEqual(cardio_set.duration_minutes, 30)
         self.assertFalse(cardio_set.is_working_set)
+
+        cardio_page = self.client.get(
+            reverse(
+                "core:workout_exercise",
+                kwargs={"date_str": "2026-08-14", "pk": cardio_entry.pk},
+            )
+        )
+        self.assertContains(cardio_page, 'data-set-title="Adicionar registro"')
+        self.assertContains(cardio_page, 'name="duration_minutes"')
+        self.assertNotContains(cardio_page, 'name="weight_kg"')
 
 
 class WorkoutModelTests(TestCase):

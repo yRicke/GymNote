@@ -821,7 +821,51 @@ def remove_exercise(request, date_str, pk):
 @login_required
 def workout_exercise_detail(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
-    exercise_sets = workout_exercise.sets.all()
+    return _render_workout_exercise(request, workout_exercise)
+
+
+def _exercise_set_form_values(exercise_set):
+    return {
+        "weight_kg": (
+            str(exercise_set.weight_kg)
+            if exercise_set.weight_kg is not None
+            else ""
+        ),
+        "reps": exercise_set.reps if exercise_set.reps is not None else "",
+        "partial_reps": (
+            exercise_set.partial_reps
+            if exercise_set.partial_reps is not None
+            else ""
+        ),
+        "duration_minutes": (
+            exercise_set.duration_minutes
+            if exercise_set.duration_minutes is not None
+            else ""
+        ),
+        "distance_km": (
+            str(exercise_set.distance_km)
+            if exercise_set.distance_km is not None
+            else ""
+        ),
+        "perceived_exertion": (
+            exercise_set.perceived_exertion
+            if exercise_set.perceived_exertion is not None
+            else ""
+        ),
+        "is_working_set": exercise_set.is_working_set,
+    }
+
+
+def _render_workout_exercise(
+    request,
+    workout_exercise,
+    *,
+    set_form=None,
+    editing_set=None,
+    open_set_dialog=False,
+    status=200,
+):
+    exercise_sets = list(workout_exercise.sets.all())
     is_cardio = workout_exercise.muscle_group.is_cardio
     return render(
         request,
@@ -829,14 +873,27 @@ def workout_exercise_detail(request, date_str, pk):
         {
             "workout_exercise": workout_exercise,
             "exercise_sets": exercise_sets,
-            "working_set_count": exercise_sets.filter(is_working_set=True).count(),
-            "total_duration_minutes": exercise_sets.aggregate(
-                total=Sum("duration_minutes"),
-            )["total"]
-            or 0,
+            "working_set_count": sum(
+                exercise_set.is_working_set for exercise_set in exercise_sets
+            ),
+            "total_duration_minutes": sum(
+                exercise_set.duration_minutes or 0
+                for exercise_set in exercise_sets
+            ),
             "is_cardio": is_cardio,
-            "set_form": ExerciseSetForm(workout_exercise=workout_exercise),
+            "set_form": (
+                set_form
+                if set_form is not None
+                else ExerciseSetForm(workout_exercise=workout_exercise)
+            ),
+            "editing_set": editing_set,
+            "open_set_dialog": open_set_dialog,
+            "exercise_set_values": {
+                str(exercise_set.pk): _exercise_set_form_values(exercise_set)
+                for exercise_set in exercise_sets
+            },
         },
+        status=status,
     )
 
 
@@ -850,31 +907,31 @@ def add_set(request, date_str, pk):
         exercise_set.workout_exercise = workout_exercise
         exercise_set.order = _next_order(workout_exercise.sets.all())
         exercise_set.save()
-        messages.success(
-            request,
+        message = (
             "Registro de cardio adicionado."
             if workout_exercise.muscle_group.is_cardio
-            else "Série adicionada.",
+            else "Série adicionada."
         )
-    else:
-        exercise_sets = workout_exercise.sets.all()
-        return render(
-            request,
-            "core/workout_exercise.html",
-            {
-                "workout_exercise": workout_exercise,
-                "exercise_sets": exercise_sets,
-                "working_set_count": exercise_sets.filter(is_working_set=True).count(),
-                "total_duration_minutes": exercise_sets.aggregate(
-                    total=Sum("duration_minutes"),
-                )["total"]
-                or 0,
-                "is_cardio": workout_exercise.muscle_group.is_cardio,
-                "set_form": form,
-            },
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse(
+                {"ok": True, "message": message, "set_id": exercise_set.pk},
+                status=201,
+            )
+        return redirect("core:workout_exercise", date_str=date_str, pk=pk)
+
+    if _wants_json(request):
+        return JsonResponse(
+            {"ok": False, "errors": _form_errors_json(form)},
             status=400,
         )
-    return redirect("core:workout_exercise", date_str=date_str, pk=pk)
+    return _render_workout_exercise(
+        request,
+        workout_exercise,
+        set_form=form,
+        open_set_dialog=True,
+        status=400,
+    )
 
 
 @login_required
@@ -895,12 +952,14 @@ def edit_set(request, pk):
         )
         if form.is_valid():
             form.save()
-            messages.success(
-                request,
+            message = (
                 "Registro de cardio atualizado."
                 if exercise_set.workout_exercise.muscle_group.is_cardio
-                else "Série atualizada.",
+                else "Série atualizada."
             )
+            messages.success(request, message)
+            if _wants_json(request):
+                return JsonResponse({"ok": True, "message": message})
             workout = exercise_set.workout_exercise.workout
             return redirect(
                 "core:workout_exercise",
@@ -912,7 +971,19 @@ def edit_set(request, pk):
             instance=exercise_set,
             workout_exercise=exercise_set.workout_exercise,
         )
-    return render(request, "core/set_form.html", {"form": form, "exercise_set": exercise_set})
+    if request.method == "POST" and _wants_json(request):
+        return JsonResponse(
+            {"ok": False, "errors": _form_errors_json(form)},
+            status=400,
+        )
+    return _render_workout_exercise(
+        request,
+        exercise_set.workout_exercise,
+        set_form=form,
+        editing_set=exercise_set,
+        open_set_dialog=True,
+        status=400 if request.method == "POST" else 200,
+    )
 
 
 @login_required

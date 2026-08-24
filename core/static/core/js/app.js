@@ -477,6 +477,51 @@
         errors.hidden = false;
         errors.focus({ preventScroll: true });
     };
+    const exerciseSetValuesElement = document.getElementById("exercise-set-form-values");
+    const exerciseSetValues = exerciseSetValuesElement
+        ? JSON.parse(exerciseSetValuesElement.textContent)
+        : {};
+    const emptyExerciseSetValues = {
+        weight_kg: "",
+        reps: "",
+        partial_reps: "",
+        duration_minutes: "",
+        distance_km: "",
+        perceived_exertion: "",
+        is_working_set: false,
+    };
+    const configureSetDialog = (dialog, opener) => {
+        const form = dialog.querySelector("[data-set-form]");
+        if (!form || !opener.dataset.setFormMode) return;
+        const isEditing = opener.dataset.setFormMode === "edit";
+        const values = isEditing
+            ? exerciseSetValues[opener.dataset.setId] || emptyExerciseSetValues
+            : emptyExerciseSetValues;
+
+        form.action = opener.dataset.setAction;
+        dialog.querySelector("[data-set-dialog-title]").textContent =
+            opener.dataset.setTitle;
+        dialog.querySelector("[data-set-dialog-eyebrow]").textContent =
+            opener.dataset.setEyebrow;
+        dialog.querySelector("[data-set-dialog-icon]").textContent =
+            isEditing ? "edit" : "add";
+        Object.entries(values).forEach(([fieldName, value]) => {
+            const field = form.elements.namedItem(fieldName);
+            if (!field) return;
+            if (field.type === "checkbox") field.checked = Boolean(value);
+            else field.value = value;
+        });
+        form.querySelectorAll(".field-error, .errorlist").forEach((error) => {
+            error.remove();
+        });
+
+        const submit = form.querySelector("[data-dialog-submit]");
+        submit.dataset.idleText = isEditing
+            ? "Salvar alterações"
+            : opener.dataset.setTitle;
+        submit.dataset.loadingText = "Salvando…";
+        submit.textContent = submit.dataset.idleText;
+    };
 
     document.querySelectorAll("[data-dialog-open]").forEach((opener) => {
         opener.addEventListener("click", (event) => {
@@ -493,6 +538,7 @@
                     opener.dataset.deleteCopy;
             }
             resetDialog(dialog);
+            configureSetDialog(dialog, opener);
             catalogControllers.get(dialog)?.resetDraft();
             dialog.returnValue = "";
             dialog.showModal();
@@ -551,6 +597,22 @@
             }
             dialogOpeners.get(dialog)?.focus({ preventScroll: true });
             dialogOpeners.delete(dialog);
+        });
+    });
+
+    document.querySelectorAll("[data-dialog-auto-open]").forEach((dialog) => {
+        if (typeof dialog.showModal !== "function") return;
+        if (dialog.open) dialog.close();
+        dialog.showModal();
+        window.requestAnimationFrame(() => {
+            const firstErrorField = dialog
+                .querySelector(".field-error")
+                ?.closest(".field")
+                ?.querySelector("input");
+            const firstField = firstErrorField || dialog.querySelector(
+                'input:not([type="hidden"]):not(:disabled)',
+            );
+            firstField?.focus({ preventScroll: true });
         });
     });
 
