@@ -40,7 +40,7 @@
             </div>
             <div class="stack-list reorderable-list preset-builder__selected-list" data-preset-selected-list{% if not form.selected_exercise_rows %} hidden{% endif %}>
                 {% for row in form.selected_exercise_rows %}
-                    <article class="list-card list-card--actions preset-builder__selected-item reorderable-item" data-selected-exercise-id="{{ row.exercise.pk }}" data-selected-exercise-name="{{ row.exercise.name }}" data-selected-exercise-group="{{ row.muscle_group.name }}" data-selected-exercise-custom="{{ row.exercise.is_custom|yesno:'true,false' }}" draggable="true">
+                    <article class="list-card list-card--actions preset-builder__selected-item reorderable-item" data-selected-exercise-id="{{ row.exercise.pk }}" data-selected-exercise-name="{{ row.exercise.name }}" data-selected-exercise-group="{{ row.muscle_group.name }}" data-selected-exercise-custom="{{ row.exercise.is_custom|yesno:'true,false' }}" draggable="false">
                         <button class="drag-handle icon-button" type="button" aria-label="Arrastar {{ row.exercise.name }} para mudar a ordem" title="Arraste para reordenar"><span class="material-symbols-outlined" aria-hidden="true" draggable="false">drag_indicator</span></button>
                         <span class="preset-builder__selected-main">
                             <strong class="preset-builder__selected-name">{{ row.exercise.name }}</strong>

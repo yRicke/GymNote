@@ -45,7 +45,7 @@
             <div class="stack-list reorderable-list" data-reorder-list data-reorder-url="{% url 'core:reorder_exercises' date_str=workout_date|date:'Y-m-d' %}">
                 <input type="hidden" data-csrf-token value="{{ csrf_token }}">
                 {% for workout_exercise in added_exercises %}
-                    <article class="list-card list-card--actions reorderable-item" data-reorder-id="{{ workout_exercise.pk }}" draggable="true">
+                    <article class="list-card list-card--actions reorderable-item" data-reorder-id="{{ workout_exercise.pk }}" draggable="false">
                         <button class="drag-handle icon-button" type="button" aria-label="Arrastar {{ workout_exercise.exercise.name }} para mudar a ordem" title="Arraste para reordenar"><span class="material-symbols-outlined" aria-hidden="true" draggable="false">drag_indicator</span></button>
                         <a class="list-card__main" href="{% url 'core:workout_exercise' date_str=workout_date|date:'Y-m-d' pk=workout_exercise.pk %}">
                             <span class="list-card__icon material-symbols-outlined" aria-hidden="true">{% if workout_exercise.muscle_group.is_cardio %}directions_run{% else %}fitness_center{% endif %}</span>

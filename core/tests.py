@@ -440,15 +440,27 @@ class WorkoutFlowTests(TestCase):
             reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
         )
         css = Path(finders.find("core/css/app.css")).read_text(encoding="utf-8")
-        javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        javascript = Path(finders.find("core/js/sortable-list.js")).read_text(
+            encoding="utf-8"
+        )
+        application_javascript = Path(finders.find("core/js/app.js")).read_text(
+            encoding="utf-8"
+        )
+        html = response.content.decode()
 
         self.assertContains(response, 'aria-hidden="true" draggable="false"')
         self.assertIn("-webkit-touch-callout: none", css)
-        self.assertIn(".reorderable-list.is-touch-reordering", css)
+        self.assertIn(".sortable-placeholder", css)
         self.assertIn('list.addEventListener("contextmenu"', javascript)
         self.assertIn('list.addEventListener("selectstart"', javascript)
         self.assertIn('item.draggable = false', javascript)
-        self.assertIn('list.classList.remove("is-touch-reordering")', javascript)
+        self.assertIn("activationDistance", javascript)
+        self.assertIn("updateAutoScroll", javascript)
+        self.assertIn("cloneNode", javascript)
+        self.assertNotIn("dataTransfer", javascript)
+        self.assertNotIn("setPointerCapture", javascript)
+        self.assertEqual(application_javascript.count("window.GymNoteSortable.create"), 2)
+        self.assertLess(html.index("sortable-list.js"), html.index("app.js"))
 
     def test_removing_last_exercise_removes_workout_and_sets(self):
         workout, entry = self.create_entry()
@@ -868,7 +880,7 @@ class PersonalizationTests(TestCase):
         self.assertContains(response, 'aria-label="Exercício pessoal"', count=2)
         self.assertContains(response, "data-remove-selected-exercise", count=2)
         self.assertContains(response, 'class="drag-handle icon-button"', count=2)
-        self.assertContains(response, 'draggable="true"', count=2)
+        self.assertContains(response, 'draggable="false"')
         self.assertContains(response, "data-preset-selection-status")
 
     def test_edit_preset_removes_exercise_and_saves_new_order(self):

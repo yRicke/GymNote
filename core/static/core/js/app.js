@@ -16,117 +16,6 @@
             .toLocaleLowerCase("pt-BR")
             .trim();
 
-    const setupReorderableList = (list, { itemSelector, onOrderChange }) => {
-        let draggedItem = null;
-        let dragEnabled = false;
-        let touchChanged = false;
-
-        const items = () => [...list.querySelectorAll(itemSelector)];
-        const notifyOrderChange = (item, inputMethod) => {
-            onOrderChange(items(), item, inputMethod);
-        };
-        const moveItem = (item, direction) => {
-            const sibling = direction < 0 ? item.previousElementSibling : item.nextElementSibling;
-            if (!sibling || !sibling.matches(itemSelector)) return false;
-            if (direction < 0) list.insertBefore(item, sibling);
-            else list.insertBefore(sibling, item);
-            return true;
-        };
-        const finishPointerReorder = (event) => {
-            if (!draggedItem || event.pointerType === "mouse") return;
-            const finishedItem = draggedItem;
-            finishedItem.classList.remove("is-dragging");
-            finishedItem.draggable = true;
-            draggedItem = null;
-            dragEnabled = false;
-            list.classList.remove("is-touch-reordering");
-            if (touchChanged) notifyOrderChange(finishedItem, "touch");
-            touchChanged = false;
-        };
-
-        list.addEventListener("contextmenu", (event) => {
-            if (event.target.closest(".drag-handle")) event.preventDefault();
-        });
-        list.addEventListener("selectstart", (event) => {
-            if (event.target.closest(".drag-handle")) event.preventDefault();
-        });
-        list.addEventListener("pointerdown", (event) => {
-            const handle = event.target.closest(".drag-handle");
-            if (!handle) {
-                dragEnabled = false;
-                return;
-            }
-            const item = handle.closest(itemSelector);
-            if (!item || item.parentElement !== list) return;
-            dragEnabled = true;
-            if (event.pointerType === "mouse") return;
-            event.preventDefault();
-            item.draggable = false;
-            draggedItem = item;
-            touchChanged = false;
-            item.classList.add("is-dragging");
-            list.classList.add("is-touch-reordering");
-            handle.setPointerCapture(event.pointerId);
-            handle.addEventListener("lostpointercapture", finishPointerReorder, { once: true });
-        });
-        list.addEventListener("pointermove", (event) => {
-            if (!draggedItem || event.pointerType === "mouse") return;
-            event.preventDefault();
-            const target = document
-                .elementFromPoint(event.clientX, event.clientY)
-                ?.closest(itemSelector);
-            if (!target || target === draggedItem || target.parentElement !== list) return;
-            const targetBox = target.getBoundingClientRect();
-            const after = event.clientY > targetBox.top + targetBox.height / 2;
-            list.insertBefore(draggedItem, after ? target.nextSibling : target);
-            touchChanged = true;
-        });
-        list.addEventListener("pointerup", finishPointerReorder);
-        list.addEventListener("pointercancel", finishPointerReorder);
-        list.addEventListener("keydown", (event) => {
-            if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
-            const handle = event.target.closest(".drag-handle");
-            const item = handle?.closest(itemSelector);
-            if (!item || item.parentElement !== list) return;
-            event.preventDefault();
-            if (moveItem(item, event.key === "ArrowUp" ? -1 : 1)) {
-                handle.focus();
-                notifyOrderChange(item, "keyboard");
-            }
-        });
-        list.addEventListener("dragstart", (event) => {
-            const item = event.target.closest(itemSelector);
-            if (!item || item.parentElement !== list || !dragEnabled) {
-                event.preventDefault();
-                return;
-            }
-            draggedItem = item;
-            item.classList.add("is-dragging");
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData(
-                "text/plain",
-                item.dataset.reorderId || item.dataset.selectedExerciseId,
-            );
-        });
-        list.addEventListener("dragend", () => {
-            if (!draggedItem) return;
-            const finishedItem = draggedItem;
-            finishedItem.classList.remove("is-dragging");
-            draggedItem = null;
-            dragEnabled = false;
-            notifyOrderChange(finishedItem, "mouse");
-        });
-        list.addEventListener("dragover", (event) => {
-            if (!draggedItem) return;
-            event.preventDefault();
-            const target = event.target.closest(itemSelector);
-            if (!target || target === draggedItem || target.parentElement !== list) return;
-            const targetBox = target.getBoundingClientRect();
-            const after = event.clientY > targetBox.top + targetBox.height / 2;
-            list.insertBefore(draggedItem, after ? target.nextSibling : target);
-        });
-    };
-
     const catalogControllers = new Map();
 
     document.querySelectorAll("[data-exercise-search-region]").forEach((searchRegion) => {
@@ -422,7 +311,7 @@
             item.dataset.selectedExerciseName = metadata.name;
             item.dataset.selectedExerciseGroup = metadata.group;
             item.dataset.selectedExerciseCustom = String(metadata.isCustom);
-            item.draggable = true;
+            item.draggable = false;
 
             const handle = document.createElement("button");
             handle.className = "drag-handle icon-button";
@@ -503,7 +392,7 @@
         presetCatalog.selectionOrder.splice(0, presetCatalog.selectionOrder.length, ...submittedOrder);
         presetCatalog.commitDraft();
 
-        setupReorderableList(selectedList, {
+        window.GymNoteSortable.create(selectedList, {
             itemSelector: "[data-selected-exercise-id]",
             onOrderChange: (orderedItems, movedItem) => {
                 const reorderedIds = orderedItems.map((item) => item.dataset.selectedExerciseId);
@@ -767,7 +656,7 @@
                 list.classList.remove("is-saving");
             }
         };
-        setupReorderableList(list, {
+        window.GymNoteSortable.create(list, {
             itemSelector: "[data-reorder-id]",
             onOrderChange: persistOrder,
         });
