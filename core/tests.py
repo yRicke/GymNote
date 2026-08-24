@@ -190,10 +190,23 @@ class WorkoutFlowTests(TestCase):
             reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
         )
 
-        self.assertContains(response, "Agachamento Livre · Quadríceps")
         self.assertContains(
-            response, "Agachamento unilateral · Quadríceps · Meu exercício"
+            response,
+            '<span class="exercise-choice__name">Agachamento Livre</span>',
         )
+        self.assertContains(
+            response,
+            '<span class="exercise-choice__name">Agachamento unilateral</span>',
+        )
+        self.assertContains(
+            response,
+            '<span class="exercise-choice__group">Quadríceps</span>',
+        )
+        self.assertContains(
+            response,
+            'aria-label="Exercício pessoal" title="Exercício pessoal">person</span>',
+        )
+        self.assertNotContains(response, "Meu exercício")
         self.assertNotContains(response, foreign.name)
         self.assertContains(response, f'value="{owned.pk}"')
 
@@ -677,6 +690,7 @@ class PersonalizationTests(TestCase):
         self.assertEqual(success.json()["exercise_id"], exercise.pk)
         self.assertEqual(success.json()["exercise"]["id"], exercise.pk)
         self.assertEqual(success.json()["exercise"]["name"], exercise.name)
+        self.assertTrue(success.json()["exercise"]["is_custom"])
         self.assertEqual(success.json()["exercise"]["group"]["id"], self.chest.pk)
         self.assertEqual(
             success.json()["exercise"]["label"],

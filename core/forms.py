@@ -1,6 +1,7 @@
 from django import forms
 from django.db import transaction
 from django.db.models import Case, IntegerField, Q, When
+from django.utils.html import format_html
 
 from .models import (
     Exercise,
@@ -13,10 +14,22 @@ from .models import (
 
 class ExerciseMultipleChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, exercise):
-        label = f"{exercise.name} · {exercise.primary_muscle_group.name}"
+        personal_indicator = ""
         if exercise.is_custom:
-            return f"{label} · Meu exercício"
-        return label
+            personal_indicator = format_html(
+                '<span class="exercise-choice__personal material-symbols-outlined" '
+                'role="img" aria-label="Exercício pessoal" '
+                'title="Exercício pessoal">{}</span>',
+                "person",
+            )
+        return format_html(
+            '<span class="exercise-choice__name">{}</span>'
+            '<span class="exercise-choice__meta">{}'
+            '<span class="exercise-choice__group">{}</span></span>',
+            exercise.name,
+            personal_indicator,
+            exercise.primary_muscle_group.name,
+        )
 
 
 class WorkoutFilterForm(forms.Form):

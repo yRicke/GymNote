@@ -82,8 +82,10 @@
             let visibleCount = 0;
             optionInputs().forEach((input) => {
                 const row = rowForInput(input);
-                const label = normalizeSearch(input.closest("label")?.textContent || "");
-                const visible = !query || label.includes(query);
+                const exerciseName = normalizeSearch(
+                    input.closest("label")?.querySelector(".exercise-choice__name")?.textContent || "",
+                );
+                const visible = !query || exerciseName.includes(query);
                 if (row) row.hidden = !visible;
                 if (visible) visibleCount += 1;
             });
@@ -154,7 +156,25 @@
                     input.value = String(exercise.id);
                     input.id = `id_exercises_created_${exercise.id}`;
                     label.htmlFor = input.id;
-                    label.append(input, document.createTextNode(` ${exercise.label}`));
+                    const name = document.createElement("span");
+                    name.className = "exercise-choice__name";
+                    name.textContent = exercise.name;
+                    const metadata = document.createElement("span");
+                    metadata.className = "exercise-choice__meta";
+                    if (exercise.is_custom) {
+                        const personal = document.createElement("span");
+                        personal.className = "exercise-choice__personal material-symbols-outlined";
+                        personal.textContent = "person";
+                        personal.setAttribute("role", "img");
+                        personal.setAttribute("aria-label", "Exercício pessoal");
+                        personal.title = "Exercício pessoal";
+                        metadata.append(personal);
+                    }
+                    const group = document.createElement("span");
+                    group.className = "exercise-choice__group";
+                    group.textContent = exercise.group.name;
+                    metadata.append(group);
+                    label.append(input, name, metadata);
                     row.append(label);
                     optionsRoot.prepend(row);
                 }

@@ -264,6 +264,7 @@ def custom_exercise_create(request):
                     "exercise": {
                         "id": exercise.pk,
                         "name": exercise.name,
+                        "is_custom": True,
                         "label": (
                             f"{exercise.name} · "
                             f"{exercise.primary_muscle_group.name} · Meu exercício"
