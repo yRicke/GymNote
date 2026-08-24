@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-shell">
+<div class="page-shell workout-day-page">
     <section class="page-heading">
         <h1>{{ workout_date|date:"l, d \d\e F" }}</h1>
     </section>
@@ -61,7 +61,7 @@
             </div>
             <p class="reorder-status sr-only" data-reorder-status aria-live="polite"></p>
         {% else %}
-            <div class="empty-state"><span class="material-symbols-outlined" aria-hidden="true">fitness_center</span><h3>Nenhum exercício adicionado</h3><p>Use o catálogo abaixo para montar o treino deste dia.</p></div>
+            <div class="empty-state"><span class="material-symbols-outlined" aria-hidden="true">fitness_center</span><h3>Nenhum exercício adicionado</h3><p>Use o botão de adicionar exercício para montar o treino deste dia.</p></div>
         {% endif %}
         {% if added_exercises or presets %}
             <div class="preset-actions">
