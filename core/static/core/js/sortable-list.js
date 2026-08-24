@@ -20,13 +20,13 @@
             itemSelector,
             handleSelector = ".drag-handle",
             activationDistance = DEFAULT_ACTIVATION_DISTANCE,
-            onChange = () => {},
+            onOrderChange = () => {},
         }) {
             this.list = list;
             this.itemSelector = itemSelector;
             this.handleSelector = handleSelector;
             this.activationDistance = activationDistance;
-            this.onChange = onChange;
+            this.onOrderChange = onOrderChange;
             this.pointer = null;
             this.drag = null;
             this.autoScrollFrame = null;
@@ -136,7 +136,7 @@
             if (nextIndex < currentIndex) this.list.insertBefore(item, items[nextIndex]);
             else this.list.insertBefore(item, items[nextIndex].nextSibling);
             handle.focus({ preventScroll: true });
-            this.onChange(this.items(), item, "keyboard");
+            this.onOrderChange(this.items(), item, "keyboard");
         }
 
         beginDrag() {
@@ -230,7 +230,9 @@
             const changed = originalIndex !== this.items().indexOf(item);
             this.drag = null;
             this.clearPointer();
-            if (commit && changed) this.onChange(this.items(), item, inputMethod);
+            if (commit && changed) {
+                this.onOrderChange(this.items(), item, inputMethod);
+            }
         }
 
         clearPointer() {
