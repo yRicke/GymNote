@@ -413,6 +413,39 @@ class WorkoutFlowTests(TestCase):
         second.refresh_from_db()
         self.assertEqual((second.order, first.order), (1, 2))
 
+    def test_reordered_exercises_keep_their_visual_order_after_reload(self):
+        workout = Workout.objects.create(user=self.user, date=self.workout_date)
+        first = WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.squat,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        second = WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.bench,
+            muscle_group=self.chest,
+            order=2,
+        )
+
+        reorder_response = self.client.post(
+            reverse("core:reorder_exercises", kwargs={"date_str": "2026-08-14"}),
+            data=json.dumps({"order": [second.pk, first.pk]}),
+            content_type="application/json",
+        )
+        reloaded_page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        rendered_entries = list(reloaded_page.context["added_exercises"])
+        html = reloaded_page.content.decode()
+
+        self.assertEqual(reorder_response.status_code, 200)
+        self.assertEqual(
+            [entry.pk for entry in rendered_entries],
+            [second.pk, first.pk],
+        )
+        self.assertLess(html.index(self.bench.name), html.index(self.squat.name))
+
     def test_reorder_rejects_incomplete_or_foreign_order(self):
         _, entry = self.create_entry()
         url = reverse("core:reorder_exercises", kwargs={"date_str": "2026-08-14"})

@@ -493,6 +493,7 @@ def workout_day(request, date_str):
             record_count=Count("sets"),
             cardio_minutes=Sum("sets__duration_minutes", default=0),
         )
+        .order_by("order")
         if workout
         else WorkoutExercise.objects.none()
     )
