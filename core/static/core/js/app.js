@@ -134,15 +134,6 @@
         updateSelectionButton();
     }
 
-    const autoFilterForm = document.querySelector("[data-auto-filter]");
-    if (autoFilterForm) {
-        autoFilterForm.addEventListener("change", (event) => {
-            if (!event.target.matches('input[type="checkbox"]')) return;
-            autoFilterForm.setAttribute("aria-busy", "true");
-            autoFilterForm.requestSubmit();
-        });
-    }
-
     const presetBuilder = document.querySelector("[data-preset-builder]");
     const presetOptions = presetBuilder?.querySelector(
         "[data-preset-exercise-options]",
@@ -217,7 +208,9 @@
 
     const dialogOpeners = new Map();
     const resetDialog = (dialog) => {
-        const form = dialog.querySelector("[data-dialog-form]");
+        const form = dialog.querySelector(
+            "[data-dialog-form], [data-reset-dialog-form]",
+        );
         if (!form) return;
         form.reset();
         form.removeAttribute("aria-busy");

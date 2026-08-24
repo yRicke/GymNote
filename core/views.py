@@ -168,16 +168,20 @@ def workout_list(request):
         queryset=MuscleGroup.objects.filter(is_active=True),
     )
     selected_groups = []
+    selected_date = None
     workouts = Workout.objects.filter(
         user=request.user,
         workout_exercises__isnull=False,
     )
     if filter_form.is_valid():
         selected_groups = list(filter_form.cleaned_data["muscle_groups"])
+        selected_date = filter_form.cleaned_data["date"]
     if selected_groups:
         workouts = workouts.filter(
             workout_exercises__muscle_group__in=selected_groups,
         )
+    if selected_date:
+        workouts = workouts.filter(date=selected_date)
     workouts = list(
         workouts.prefetch_related("workout_exercises__muscle_group")
         .distinct()
@@ -189,6 +193,7 @@ def workout_list(request):
                 entry.muscle_group.name for entry in workout.workout_exercises.all()
             )
         )
+    has_filters = bool(selected_groups or selected_date)
     return render(
         request,
         "core/workout_list.html",
@@ -196,6 +201,9 @@ def workout_list(request):
             "workouts": workouts,
             "filter_form": filter_form,
             "selected_groups": selected_groups,
+            "selected_date": selected_date,
+            "has_filters": has_filters,
+            "selected_filter_count": len(selected_groups) + bool(selected_date),
         },
     )
 

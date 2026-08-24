@@ -20,6 +20,11 @@ class ExerciseMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 
 class WorkoutFilterForm(forms.Form):
+    date = forms.DateField(
+        label="Data",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
     muscle_groups = forms.ModelMultipleChoiceField(
         queryset=MuscleGroup.objects.none(),
         widget=forms.CheckboxSelectMultiple,

@@ -10,29 +10,28 @@
 
 {% block content %}
 <div class="page-shell">
-    <section class="page-heading">
+    <section class="page-heading page-heading--split">
         <h1>Seus treinos</h1>
+        <button class="button button--ghost button--compact workout-filter-button{% if has_filters %} is-active{% endif %}" type="button" data-dialog-open="workout-filter-dialog">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_alt</span>
+            Filtros
+            {% if selected_filter_count %}<span class="workout-filter-button__count">{{ selected_filter_count }}</span>{% endif %}
+        </button>
     </section>
 
-    <section class="panel workout-filter">
-        <div class="section-heading">
-            <div><p class="eyebrow eyebrow--accent">Filtros</p><h2>Grupos e modalidades</h2></div>
-            {% if selected_groups %}<span class="pill">{{ selected_groups|length }} selecionado{{ selected_groups|length|pluralize:"s" }}</span>{% endif %}
-        </div>
-        <form class="selection-form" method="get" data-auto-filter>
-            <div class="choice-list choice-list--filters">{{ filter_form.muscle_groups }}</div>
-            {% for error in filter_form.muscle_groups.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-            <div class="button-stack">
-                {% if selected_groups %}<a class="button button--ghost button--full" href="{% url 'core:workouts' %}">Limpar filtros</a>{% endif %}
-                <noscript><button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtrar treinos</button></noscript>
+    {% if has_filters %}
+        <div class="active-filters" aria-label="Filtros aplicados">
+            <div class="active-filters__items">
+                {% if selected_date %}<span class="filter-chip"><span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>{{ selected_date|date:"d/m/Y" }}</span>{% endif %}
+                {% for group in selected_groups %}<span class="filter-chip">{{ group.name }}</span>{% endfor %}
             </div>
-            <p class="filter-status sr-only" aria-live="polite">Os resultados são atualizados ao selecionar um grupo.</p>
-        </form>
-    </section>
+            <a href="{% url 'core:workouts' %}">Limpar</a>
+        </div>
+    {% endif %}
 
     <section class="content-section">
         <div class="section-heading">
-            <h2>{% if selected_groups %}Resultados{% else %}Todos os treinos{% endif %}</h2>
+            <h2>{% if has_filters %}Resultados{% else %}Todos os treinos{% endif %}</h2>
             {% if workouts %}<span class="pill">{{ workouts|length }} treino{{ workouts|length|pluralize:"s" }}</span>{% endif %}
         </div>
         {% if workouts %}
@@ -51,16 +50,16 @@
         {% else %}
             <div class="button-stack">
                 <div class="empty-state">
-                    <span class="material-symbols-outlined" aria-hidden="true">{% if selected_groups %}filter_alt_off{% else %}event_note{% endif %}</span>
-                    {% if selected_groups %}
+                    <span class="material-symbols-outlined" aria-hidden="true">{% if has_filters %}filter_alt_off{% else %}event_note{% endif %}</span>
+                    {% if has_filters %}
                         <h3>Nenhum treino encontrado</h3>
-                        <p>Não há treinos com os grupos ou modalidades selecionados.</p>
+                        <p>Não há treinos para os filtros selecionados.</p>
                     {% else %}
                         <h3>Nenhum treino registrado</h3>
                         <p>Escolha um dia no calendário e adicione seu primeiro exercício.</p>
                     {% endif %}
                 </div>
-                {% if selected_groups %}
+                {% if has_filters %}
                     <a class="button button--ghost button--full" href="{% url 'core:workouts' %}">Limpar filtros</a>
                 {% else %}
                     <a class="button button--primary button--full" href="{% url 'core:calendar' %}">Abrir calendário <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a>
@@ -68,5 +67,32 @@
             </div>
         {% endif %}
     </section>
+
+    <dialog class="preset-dialog" id="workout-filter-dialog" aria-labelledby="workout-filter-dialog-title">
+        <div class="preset-dialog__surface">
+            <div class="preset-dialog__heading">
+                <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true">filter_alt</span>
+                <div><h2 id="workout-filter-dialog-title">Filtrar treinos</h2></div>
+                <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+            </div>
+            <form class="app-form" method="get" action="{% url 'core:workouts' %}" data-reset-dialog-form>
+                <div class="field">
+                    {{ filter_form.date.label_tag }}
+                    {{ filter_form.date }}
+                    {% for error in filter_form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="field">
+                    <span class="field-label">{{ filter_form.muscle_groups.label }}</span>
+                    <div class="choice-list choice-list--filters workout-filter__groups">{{ filter_form.muscle_groups }}</div>
+                    {% for error in filter_form.muscle_groups.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="preset-dialog__actions">
+                    <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                    <button class="button button--primary" type="submit"><span class="material-symbols-outlined" aria-hidden="true">check</span> Salvar filtros</button>
+                </div>
+                {% if has_filters %}<a class="workout-filter__clear" href="{% url 'core:workouts' %}">Limpar todos os filtros</a>{% endif %}
+            </form>
+        </div>
+    </dialog>
 </div>
 {% endblock %}
