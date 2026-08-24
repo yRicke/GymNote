@@ -588,13 +588,19 @@
 
         items().forEach((item) => {
             const handle = item.querySelector(".drag-handle");
+            const preventNativeHandleMenu = (event) => event.preventDefault();
+
+            handle?.addEventListener("contextmenu", preventNativeHandleMenu);
+            handle?.addEventListener("selectstart", preventNativeHandleMenu);
             handle?.addEventListener("pointerdown", (event) => {
                 dragEnabled = true;
                 if (event.pointerType === "mouse") return;
                 event.preventDefault();
+                item.draggable = false;
                 draggedItem = item;
                 touchChanged = false;
                 item.classList.add("is-dragging");
+                list.classList.add("is-touch-reordering");
                 handle.setPointerCapture(event.pointerId);
             });
             item.addEventListener("pointerdown", (event) => {
@@ -617,10 +623,13 @@
                 draggedItem.classList.remove("is-dragging");
                 draggedItem = null;
                 dragEnabled = false;
+                item.draggable = true;
+                list.classList.remove("is-touch-reordering");
                 if (touchChanged) persistOrder();
             };
             handle?.addEventListener("pointerup", finishPointerReorder);
             handle?.addEventListener("pointercancel", finishPointerReorder);
+            handle?.addEventListener("lostpointercapture", finishPointerReorder);
             handle?.addEventListener("keydown", (event) => {
                 if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
                 event.preventDefault();

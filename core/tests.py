@@ -1,7 +1,9 @@
 import json
 from datetime import date
+from pathlib import Path
 
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db import IntegrityError, connection, transaction
@@ -431,6 +433,22 @@ class WorkoutFlowTests(TestCase):
             ).status_code,
             400,
         )
+
+    def test_mobile_reorder_handle_blocks_native_text_selection(self):
+        self.create_entry()
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        css = Path(finders.find("core/css/app.css")).read_text(encoding="utf-8")
+        javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+
+        self.assertContains(response, 'aria-hidden="true" draggable="false"')
+        self.assertIn("-webkit-touch-callout: none", css)
+        self.assertIn(".reorderable-list.is-touch-reordering", css)
+        self.assertIn('handle?.addEventListener("contextmenu"', javascript)
+        self.assertIn('handle?.addEventListener("selectstart"', javascript)
+        self.assertIn('item.draggable = false', javascript)
+        self.assertIn('list.classList.remove("is-touch-reordering")', javascript)
 
     def test_removing_last_exercise_removes_workout_and_sets(self):
         workout, entry = self.create_entry()
