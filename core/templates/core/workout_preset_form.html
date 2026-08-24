@@ -38,14 +38,22 @@
                 <h2 id="preset-exercises-title">Exercícios</h2>
                 <span class="pill" data-preset-selected-count>{{ form.selected_exercise_rows|length }} selecionado{{ form.selected_exercise_rows|length|pluralize:"s" }}</span>
             </div>
-            <div class="stack-list preset-builder__selected-list" data-preset-selected-list{% if not form.selected_exercise_rows %} hidden{% endif %}>
+            <div class="stack-list reorderable-list preset-builder__selected-list" data-preset-selected-list{% if not form.selected_exercise_rows %} hidden{% endif %}>
                 {% for row in form.selected_exercise_rows %}
-                    <article class="list-card preset-builder__selected-item" data-selected-exercise-id="{{ row.exercise.pk }}">
-                        <span class="list-card__icon material-symbols-outlined" aria-hidden="true">fitness_center</span>
-                        <span class="list-card__body"><strong>{{ row.exercise.name }}</strong><small>{{ row.muscle_group.name }}</small></span>
+                    <article class="list-card list-card--actions preset-builder__selected-item reorderable-item" data-selected-exercise-id="{{ row.exercise.pk }}" data-selected-exercise-name="{{ row.exercise.name }}" data-selected-exercise-group="{{ row.muscle_group.name }}" data-selected-exercise-custom="{{ row.exercise.is_custom|yesno:'true,false' }}" draggable="true">
+                        <button class="drag-handle icon-button" type="button" aria-label="Arrastar {{ row.exercise.name }} para mudar a ordem" title="Arraste para reordenar"><span class="material-symbols-outlined" aria-hidden="true" draggable="false">drag_indicator</span></button>
+                        <span class="preset-builder__selected-main">
+                            <strong class="preset-builder__selected-name">{{ row.exercise.name }}</strong>
+                            <span class="exercise-choice__meta">
+                                {% if row.exercise.is_custom %}<span class="exercise-choice__personal material-symbols-outlined" role="img" aria-label="Exercício pessoal" title="Exercício pessoal">person</span>{% endif %}
+                                <span class="exercise-choice__group">{{ row.muscle_group.name }}</span>
+                            </span>
+                        </span>
+                        <button class="icon-button icon-button--danger preset-builder__remove" type="button" data-remove-selected-exercise aria-label="Remover {{ row.exercise.name }} da predefinição" title="Remover da predefinição"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
                     </article>
                 {% endfor %}
             </div>
+            <p class="sr-only" data-preset-selection-status aria-live="polite"></p>
             <div class="empty-state empty-state--compact preset-builder__selection-empty" data-preset-selection-empty{% if form.selected_exercise_rows %} hidden{% endif %}>
                 <span class="material-symbols-outlined" aria-hidden="true">playlist_add</span>
                 <p>Nenhum exercício selecionado.</p>

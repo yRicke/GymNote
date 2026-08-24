@@ -15,6 +15,118 @@
             .replace(/[\u0300-\u036f]/g, "")
             .toLocaleLowerCase("pt-BR")
             .trim();
+
+    const setupReorderableList = (list, { itemSelector, onOrderChange }) => {
+        let draggedItem = null;
+        let dragEnabled = false;
+        let touchChanged = false;
+
+        const items = () => [...list.querySelectorAll(itemSelector)];
+        const notifyOrderChange = (item, inputMethod) => {
+            onOrderChange(items(), item, inputMethod);
+        };
+        const moveItem = (item, direction) => {
+            const sibling = direction < 0 ? item.previousElementSibling : item.nextElementSibling;
+            if (!sibling || !sibling.matches(itemSelector)) return false;
+            if (direction < 0) list.insertBefore(item, sibling);
+            else list.insertBefore(sibling, item);
+            return true;
+        };
+        const finishPointerReorder = (event) => {
+            if (!draggedItem || event.pointerType === "mouse") return;
+            const finishedItem = draggedItem;
+            finishedItem.classList.remove("is-dragging");
+            finishedItem.draggable = true;
+            draggedItem = null;
+            dragEnabled = false;
+            list.classList.remove("is-touch-reordering");
+            if (touchChanged) notifyOrderChange(finishedItem, "touch");
+            touchChanged = false;
+        };
+
+        list.addEventListener("contextmenu", (event) => {
+            if (event.target.closest(".drag-handle")) event.preventDefault();
+        });
+        list.addEventListener("selectstart", (event) => {
+            if (event.target.closest(".drag-handle")) event.preventDefault();
+        });
+        list.addEventListener("pointerdown", (event) => {
+            const handle = event.target.closest(".drag-handle");
+            if (!handle) {
+                dragEnabled = false;
+                return;
+            }
+            const item = handle.closest(itemSelector);
+            if (!item || item.parentElement !== list) return;
+            dragEnabled = true;
+            if (event.pointerType === "mouse") return;
+            event.preventDefault();
+            item.draggable = false;
+            draggedItem = item;
+            touchChanged = false;
+            item.classList.add("is-dragging");
+            list.classList.add("is-touch-reordering");
+            handle.setPointerCapture(event.pointerId);
+            handle.addEventListener("lostpointercapture", finishPointerReorder, { once: true });
+        });
+        list.addEventListener("pointermove", (event) => {
+            if (!draggedItem || event.pointerType === "mouse") return;
+            event.preventDefault();
+            const target = document
+                .elementFromPoint(event.clientX, event.clientY)
+                ?.closest(itemSelector);
+            if (!target || target === draggedItem || target.parentElement !== list) return;
+            const targetBox = target.getBoundingClientRect();
+            const after = event.clientY > targetBox.top + targetBox.height / 2;
+            list.insertBefore(draggedItem, after ? target.nextSibling : target);
+            touchChanged = true;
+        });
+        list.addEventListener("pointerup", finishPointerReorder);
+        list.addEventListener("pointercancel", finishPointerReorder);
+        list.addEventListener("keydown", (event) => {
+            if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
+            const handle = event.target.closest(".drag-handle");
+            const item = handle?.closest(itemSelector);
+            if (!item || item.parentElement !== list) return;
+            event.preventDefault();
+            if (moveItem(item, event.key === "ArrowUp" ? -1 : 1)) {
+                handle.focus();
+                notifyOrderChange(item, "keyboard");
+            }
+        });
+        list.addEventListener("dragstart", (event) => {
+            const item = event.target.closest(itemSelector);
+            if (!item || item.parentElement !== list || !dragEnabled) {
+                event.preventDefault();
+                return;
+            }
+            draggedItem = item;
+            item.classList.add("is-dragging");
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData(
+                "text/plain",
+                item.dataset.reorderId || item.dataset.selectedExerciseId,
+            );
+        });
+        list.addEventListener("dragend", () => {
+            if (!draggedItem) return;
+            const finishedItem = draggedItem;
+            finishedItem.classList.remove("is-dragging");
+            draggedItem = null;
+            dragEnabled = false;
+            notifyOrderChange(finishedItem, "mouse");
+        });
+        list.addEventListener("dragover", (event) => {
+            if (!draggedItem) return;
+            event.preventDefault();
+            const target = event.target.closest(itemSelector);
+            if (!target || target === draggedItem || target.parentElement !== list) return;
+            const targetBox = target.getBoundingClientRect();
+            const after = event.clientY > targetBox.top + targetBox.height / 2;
+            list.insertBefore(draggedItem, after ? target.nextSibling : target);
+        });
+    };
+
     const catalogControllers = new Map();
 
     document.querySelectorAll("[data-exercise-search-region]").forEach((searchRegion) => {
@@ -280,25 +392,87 @@
         const selectedList = presetBuilder.querySelector("[data-preset-selected-list]");
         const selectedCount = presetBuilder.querySelector("[data-preset-selected-count]");
         const emptyState = presetBuilder.querySelector("[data-preset-selection-empty]");
+        const selectionStatus = presetBuilder.querySelector("[data-preset-selection-status]");
         const confirmButton = presetCatalogDialog.querySelector("[data-catalog-confirm]");
         const initialMetadata = new Map(
             [...selectedList.querySelectorAll("[data-selected-exercise-id]")].map((item) => [
                 item.dataset.selectedExerciseId,
                 {
-                    name: item.querySelector("strong")?.textContent.trim() || "",
-                    group: item.querySelector("small")?.textContent.trim() || "",
+                    name: item.dataset.selectedExerciseName || "",
+                    group: item.dataset.selectedExerciseGroup || "",
+                    isCustom: item.dataset.selectedExerciseCustom === "true",
                 },
             ]),
         );
         const metadataForInput = (input) => {
-            const [name = "", group = ""] = (input.closest("label")?.textContent || "")
-                .split("·")
-                .map((part) => part.trim());
-            return { name, group };
+            const label = input.closest("label");
+            return {
+                name: label?.querySelector(".exercise-choice__name")?.textContent.trim() || "",
+                group: label?.querySelector(".exercise-choice__group")?.textContent.trim() || "",
+                isCustom: Boolean(label?.querySelector(".exercise-choice__personal")),
+            };
         };
         const orderedSelectedIds = () => presetCatalog.selectionOrder.filter(
             (exerciseId) => presetCatalog.selectedExerciseIds.has(exerciseId),
         );
+        const createSelectionItem = (exerciseId, metadata) => {
+            const item = document.createElement("article");
+            item.className = "list-card list-card--actions preset-builder__selected-item reorderable-item";
+            item.dataset.selectedExerciseId = exerciseId;
+            item.dataset.selectedExerciseName = metadata.name;
+            item.dataset.selectedExerciseGroup = metadata.group;
+            item.dataset.selectedExerciseCustom = String(metadata.isCustom);
+            item.draggable = true;
+
+            const handle = document.createElement("button");
+            handle.className = "drag-handle icon-button";
+            handle.type = "button";
+            handle.title = "Arraste para reordenar";
+            handle.setAttribute("aria-label", `Arrastar ${metadata.name} para mudar a ordem`);
+            const handleIcon = document.createElement("span");
+            handleIcon.className = "material-symbols-outlined";
+            handleIcon.setAttribute("aria-hidden", "true");
+            handleIcon.draggable = false;
+            handleIcon.textContent = "drag_indicator";
+            handle.append(handleIcon);
+
+            const main = document.createElement("span");
+            main.className = "preset-builder__selected-main";
+            const name = document.createElement("strong");
+            name.className = "preset-builder__selected-name";
+            name.textContent = metadata.name;
+            const meta = document.createElement("span");
+            meta.className = "exercise-choice__meta";
+            if (metadata.isCustom) {
+                const personal = document.createElement("span");
+                personal.className = "exercise-choice__personal material-symbols-outlined";
+                personal.setAttribute("role", "img");
+                personal.setAttribute("aria-label", "Exercício pessoal");
+                personal.title = "Exercício pessoal";
+                personal.textContent = "person";
+                meta.append(personal);
+            }
+            const group = document.createElement("span");
+            group.className = "exercise-choice__group";
+            group.textContent = metadata.group;
+            meta.append(group);
+            main.append(name, meta);
+
+            const remove = document.createElement("button");
+            remove.className = "icon-button icon-button--danger preset-builder__remove";
+            remove.type = "button";
+            remove.dataset.removeSelectedExercise = "";
+            remove.setAttribute("aria-label", `Remover ${metadata.name} da predefinição`);
+            remove.title = "Remover da predefinição";
+            const removeIcon = document.createElement("span");
+            removeIcon.className = "material-symbols-outlined";
+            removeIcon.setAttribute("aria-hidden", "true");
+            removeIcon.textContent = "close";
+            remove.append(removeIcon);
+
+            item.append(handle, main, remove);
+            return item;
+        };
         const renderSelection = () => {
             const inputsById = new Map(
                 presetCatalog.optionInputs().map((input) => [input.value, input]),
@@ -309,22 +483,7 @@
                 const input = inputsById.get(exerciseId);
                 if (!input) return;
                 const metadata = initialMetadata.get(exerciseId) || metadataForInput(input);
-                const item = document.createElement("article");
-                item.className = "list-card preset-builder__selected-item";
-                item.dataset.selectedExerciseId = exerciseId;
-                const icon = document.createElement("span");
-                icon.className = "list-card__icon material-symbols-outlined";
-                icon.setAttribute("aria-hidden", "true");
-                icon.textContent = "fitness_center";
-                const body = document.createElement("span");
-                body.className = "list-card__body";
-                const name = document.createElement("strong");
-                name.textContent = metadata.name;
-                const group = document.createElement("small");
-                group.textContent = metadata.group;
-                body.append(name, group);
-                item.append(icon, body);
-                selectedList.append(item);
+                selectedList.append(createSelectionItem(exerciseId, metadata));
             });
             selectedList.hidden = selectedIds.length === 0;
             emptyState.hidden = selectedIds.length !== 0;
@@ -343,6 +502,41 @@
         });
         presetCatalog.selectionOrder.splice(0, presetCatalog.selectionOrder.length, ...submittedOrder);
         presetCatalog.commitDraft();
+
+        setupReorderableList(selectedList, {
+            itemSelector: "[data-selected-exercise-id]",
+            onOrderChange: (orderedItems, movedItem) => {
+                const reorderedIds = orderedItems.map((item) => item.dataset.selectedExerciseId);
+                presetCatalog.selectionOrder.splice(
+                    0,
+                    presetCatalog.selectionOrder.length,
+                    ...reorderedIds,
+                );
+                presetCatalog.commitDraft();
+                orderInput.value = reorderedIds.join(",");
+                const position = reorderedIds.indexOf(movedItem.dataset.selectedExerciseId) + 1;
+                selectionStatus.textContent = `${movedItem.dataset.selectedExerciseName} movido para a posição ${position}.`;
+            },
+        });
+        selectedList.addEventListener("click", (event) => {
+            const removeButton = event.target.closest("[data-remove-selected-exercise]");
+            if (!removeButton) return;
+            const item = removeButton.closest("[data-selected-exercise-id]");
+            const exerciseId = item?.dataset.selectedExerciseId;
+            if (!exerciseId) return;
+            const exerciseName = item.dataset.selectedExerciseName;
+            presetCatalog.selectedExerciseIds.delete(exerciseId);
+            const orderIndex = presetCatalog.selectionOrder.indexOf(exerciseId);
+            if (orderIndex >= 0) presetCatalog.selectionOrder.splice(orderIndex, 1);
+            const input = presetCatalog.optionInputs().find((option) => option.value === exerciseId);
+            if (input) {
+                input.checked = false;
+                input.defaultChecked = false;
+            }
+            presetCatalog.commitDraft();
+            renderSelection();
+            selectionStatus.textContent = `${exerciseName} removido da predefinição.`;
+        });
 
         confirmButton.addEventListener("click", () => {
             presetCatalog.commitDraft();
@@ -547,23 +741,11 @@
     document.querySelectorAll("[data-reorder-list]").forEach((list) => {
         const status = list.parentElement.querySelector("[data-reorder-status]");
         const csrfToken = list.querySelector("[data-csrf-token]")?.value;
-        let draggedItem = null;
-        let dragEnabled = false;
-        let touchChanged = false;
-
-        const items = () => [...list.querySelectorAll("[data-reorder-id]")];
         const announce = (message) => {
             if (status) status.textContent = message;
         };
-        const moveItem = (item, direction) => {
-            const sibling = direction < 0 ? item.previousElementSibling : item.nextElementSibling;
-            if (!sibling || !sibling.matches("[data-reorder-id]")) return false;
-            if (direction < 0) list.insertBefore(item, sibling);
-            else list.insertBefore(sibling, item);
-            return true;
-        };
-        const persistOrder = async () => {
-            const order = items().map((item) => Number(item.dataset.reorderId));
+        const persistOrder = async (orderedItems) => {
+            const order = orderedItems.map((item) => Number(item.dataset.reorderId));
             list.classList.add("is-saving");
             announce("Salvando nova ordem…");
             try {
@@ -585,85 +767,9 @@
                 list.classList.remove("is-saving");
             }
         };
-
-        items().forEach((item) => {
-            const handle = item.querySelector(".drag-handle");
-            const preventNativeHandleMenu = (event) => event.preventDefault();
-
-            handle?.addEventListener("contextmenu", preventNativeHandleMenu);
-            handle?.addEventListener("selectstart", preventNativeHandleMenu);
-            handle?.addEventListener("pointerdown", (event) => {
-                dragEnabled = true;
-                if (event.pointerType === "mouse") return;
-                event.preventDefault();
-                item.draggable = false;
-                draggedItem = item;
-                touchChanged = false;
-                item.classList.add("is-dragging");
-                list.classList.add("is-touch-reordering");
-                handle.setPointerCapture(event.pointerId);
-            });
-            item.addEventListener("pointerdown", (event) => {
-                if (!event.target.closest(".drag-handle")) dragEnabled = false;
-            });
-            handle?.addEventListener("pointermove", (event) => {
-                if (!draggedItem || event.pointerType === "mouse") return;
-                event.preventDefault();
-                const target = document
-                    .elementFromPoint(event.clientX, event.clientY)
-                    ?.closest("[data-reorder-id]");
-                if (!target || target === draggedItem || target.parentElement !== list) return;
-                const targetBox = target.getBoundingClientRect();
-                const after = event.clientY > targetBox.top + targetBox.height / 2;
-                list.insertBefore(draggedItem, after ? target.nextSibling : target);
-                touchChanged = true;
-            });
-            const finishPointerReorder = (event) => {
-                if (!draggedItem || event.pointerType === "mouse") return;
-                draggedItem.classList.remove("is-dragging");
-                draggedItem = null;
-                dragEnabled = false;
-                item.draggable = true;
-                list.classList.remove("is-touch-reordering");
-                if (touchChanged) persistOrder();
-            };
-            handle?.addEventListener("pointerup", finishPointerReorder);
-            handle?.addEventListener("pointercancel", finishPointerReorder);
-            handle?.addEventListener("lostpointercapture", finishPointerReorder);
-            handle?.addEventListener("keydown", (event) => {
-                if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
-                event.preventDefault();
-                if (moveItem(item, event.key === "ArrowUp" ? -1 : 1)) {
-                    handle.focus();
-                    persistOrder();
-                }
-            });
-            item.addEventListener("dragstart", (event) => {
-                if (!dragEnabled) {
-                    event.preventDefault();
-                    return;
-                }
-                draggedItem = item;
-                item.classList.add("is-dragging");
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", item.dataset.reorderId);
-            });
-            item.addEventListener("dragend", () => {
-                if (!draggedItem) return;
-                item.classList.remove("is-dragging");
-                draggedItem = null;
-                dragEnabled = false;
-                persistOrder();
-            });
-        });
-        list.addEventListener("dragover", (event) => {
-            if (!draggedItem) return;
-            event.preventDefault();
-            const target = event.target.closest("[data-reorder-id]");
-            if (!target || target === draggedItem) return;
-            const targetBox = target.getBoundingClientRect();
-            const after = event.clientY > targetBox.top + targetBox.height / 2;
-            list.insertBefore(draggedItem, after ? target.nextSibling : target);
+        setupReorderableList(list, {
+            itemSelector: "[data-reorder-id]",
+            onOrderChange: persistOrder,
         });
     });
 })();

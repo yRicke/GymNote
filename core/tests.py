@@ -445,8 +445,8 @@ class WorkoutFlowTests(TestCase):
         self.assertContains(response, 'aria-hidden="true" draggable="false"')
         self.assertIn("-webkit-touch-callout: none", css)
         self.assertIn(".reorderable-list.is-touch-reordering", css)
-        self.assertIn('handle?.addEventListener("contextmenu"', javascript)
-        self.assertIn('handle?.addEventListener("selectstart"', javascript)
+        self.assertIn('list.addEventListener("contextmenu"', javascript)
+        self.assertIn('list.addEventListener("selectstart"', javascript)
         self.assertIn('item.draggable = false', javascript)
         self.assertIn('list.classList.remove("is-touch-reordering")', javascript)
 
@@ -852,6 +852,48 @@ class PersonalizationTests(TestCase):
         self.assertContains(
             response,
             f'data-selected-exercise-id="{self.system_chest.pk}"',
+        )
+
+    def test_selected_preset_exercises_render_tags_remove_and_reorder_controls(self):
+        custom = self.create_custom()
+        preset = self.create_preset(entries=[self.system_triceps, custom])
+
+        response = self.client.get(
+            reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk})
+        )
+
+        self.assertContains(response, 'class="exercise-choice__group"')
+        self.assertContains(response, 'data-selected-exercise-group="Tríceps"')
+        self.assertContains(response, 'data-selected-exercise-custom="true"')
+        self.assertContains(response, 'aria-label="Exercício pessoal"', count=2)
+        self.assertContains(response, "data-remove-selected-exercise", count=2)
+        self.assertContains(response, 'class="drag-handle icon-button"', count=2)
+        self.assertContains(response, 'draggable="true"', count=2)
+        self.assertContains(response, "data-preset-selection-status")
+
+    def test_edit_preset_removes_exercise_and_saves_new_order(self):
+        custom = self.create_custom()
+        preset = self.create_preset(
+            entries=[self.system_chest, self.system_triceps, custom]
+        )
+
+        response = self.client.post(
+            reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk}),
+            {
+                "name": preset.name,
+                "exercises": [self.system_chest.pk, custom.pk],
+                "exercise_order": f"{custom.pk},{self.system_chest.pk}",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core:personalization_presets"))
+        self.assertEqual(
+            list(
+                preset.exercise_entries.order_by("order").values_list(
+                    "exercise_id", flat=True
+                )
+            ),
+            [custom.pk, self.system_chest.pk],
         )
 
     def test_invalid_preset_rerenders_submitted_selection_and_order(self):
