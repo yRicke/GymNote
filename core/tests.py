@@ -276,6 +276,64 @@ class WorkoutFlowTests(TestCase):
         self.assertIn(workout, included.context["workouts"])
         self.assertNotIn(workout, excluded.context["workouts"])
 
+    def test_workout_filters_render_in_modal_without_automatic_submission(self):
+        response = self.client.get(reverse("core:workouts"))
+
+        self.assertContains(response, 'data-dialog-open="workout-filter-dialog"')
+        self.assertContains(response, 'id="workout-filter-dialog"')
+        self.assertContains(response, 'name="date"')
+        self.assertContains(response, 'type="date"')
+        self.assertContains(response, "Salvar filtros")
+        self.assertContains(response, 'data-reset-dialog-form')
+        self.assertNotContains(response, 'data-auto-filter')
+
+    def test_workout_list_filters_by_date(self):
+        first, _ = self.create_entry()
+        second = Workout.objects.create(user=self.user, date=date(2026, 8, 15))
+        WorkoutExercise.objects.create(
+            workout=second,
+            exercise=self.bench,
+            muscle_group=self.chest,
+            order=1,
+        )
+
+        response = self.client.get(
+            reverse("core:workouts"), {"date": "2026-08-15"}
+        )
+
+        self.assertEqual(response.context["workouts"], [second])
+        self.assertNotIn(first, response.context["workouts"])
+        self.assertEqual(response.context["selected_date"], date(2026, 8, 15))
+        self.assertTrue(response.context["has_filters"])
+        self.assertEqual(response.context["selected_filter_count"], 1)
+        self.assertContains(response, "15/08/2026")
+
+    def test_workout_list_combines_date_and_group_only_after_request(self):
+        first, _ = self.create_entry()
+        second = Workout.objects.create(user=self.user, date=date(2026, 8, 15))
+        WorkoutExercise.objects.create(
+            workout=second,
+            exercise=self.bench,
+            muscle_group=self.chest,
+            order=1,
+        )
+
+        matching = self.client.get(
+            reverse("core:workouts"),
+            {"date": "2026-08-15", "muscle_groups": [self.chest.pk]},
+        )
+        non_matching = self.client.get(
+            reverse("core:workouts"),
+            {"date": "2026-08-15", "muscle_groups": [self.quadriceps.pk]},
+        )
+
+        self.assertEqual(matching.context["workouts"], [second])
+        self.assertNotIn(first, matching.context["workouts"])
+        self.assertEqual(matching.context["selected_filter_count"], 2)
+        self.assertContains(matching, "Peito")
+        self.assertEqual(non_matching.context["workouts"], [])
+        self.assertContains(non_matching, "Nenhum treino encontrado")
+
     def test_calendar_indicator_requires_an_exercise(self):
         Workout.objects.create(user=self.user, date=self.workout_date)
         empty_response = self.client.get(
