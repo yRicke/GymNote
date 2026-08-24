@@ -8,8 +8,15 @@ from django.db import IntegrityError, connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import RequestFactory, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils.text import slugify
 
 from . import error_views
+from .catalog import (
+    EXERCISE_GROUPS,
+    PRIMARY_GROUP_OVERRIDES,
+    RENAMED_SYSTEM_EXERCISES,
+    SYSTEM_EXERCISE_NAMES,
+)
 from .default_presets import DEFAULT_WORKOUT_PRESETS
 from .management.commands.seed_gym_data import CATALOG
 from .models import (
@@ -1192,27 +1199,38 @@ class PersonalizationTests(TestCase):
         self.assertFalse(Workout.objects.exists())
 
 
-class SeedGymDataTests(TestCase):
+class SeedGymDataTests(TransactionTestCase):
     def test_seed_creates_catalog_and_primary_groups_idempotently(self):
         call_command("seed_gym_data")
         call_command("seed_gym_data")
 
         self.assertEqual(MuscleGroup.objects.count(), len(CATALOG))
         expected_exercises = {name for names in CATALOG.values() for name in names}
+        self.assertEqual(len(expected_exercises), 74)
         self.assertEqual(Exercise.objects.count(), len(expected_exercises))
         squat = Exercise.objects.get(name="Agachamento Livre")
         bench = Exercise.objects.get(name="Supino Fechado")
+        face_pull = Exercise.objects.get(name="Face Pull")
         self.assertEqual(squat.primary_muscle_group.name, "Quadríceps")
-        self.assertEqual(bench.primary_muscle_group.name, "Peito")
+        self.assertEqual(bench.primary_muscle_group.name, "Tríceps")
+        self.assertEqual(face_pull.primary_muscle_group.name, "Ombros")
         self.assertEqual(squat.muscle_groups.count(), 2)
         self.assertEqual(bench.muscle_groups.count(), 2)
+        self.assertEqual(face_pull.muscle_groups.count(), 2)
+        self.assertFalse(
+            Exercise.objects.filter(name="Supino Declinado com Barra").exists()
+        )
+        self.assertEqual(
+            Exercise.objects.filter(primary_muscle_group__name="Cardio").count(),
+            8,
+        )
 
 
-class DefaultWorkoutPresetTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
+class DefaultWorkoutPresetTests(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
         call_command("seed_gym_data")
-        cls.user = User.objects.create_user(
+        self.user = User.objects.create_user(
             "starter_presets",
             password="senha-teste-123",
         )
@@ -1282,6 +1300,10 @@ class DailyWorkoutMigrationTests(TransactionTestCase):
         ExerciseSetOld = old_apps.get_model("core", "ExerciseSet")
         PresetOld = old_apps.get_model("core", "WorkoutPreset")
         PresetEntryOld = old_apps.get_model("core", "WorkoutPresetExercise")
+
+        UserModel.objects.all().delete()
+        ExerciseOld.objects.all().delete()
+        MuscleGroupOld.objects.all().delete()
 
         user = UserModel.objects.create(username="migration_user")
         primary = MuscleGroupOld.objects.create(
@@ -1399,6 +1421,41 @@ class DefaultWorkoutPresetMigrationTests(TransactionTestCase):
         "Mesa Flexora": "Posterior de Coxa",
         "Panturrilha em Pé": "Panturrilhas",
     }
+    legacy_presets = (
+        (
+            "Treino A — Peito, ombros e tríceps",
+            (
+                "Supino Reto com Barra",
+                "Supino Inclinado com Halteres",
+                "Peck Deck",
+                "Desenvolvimento com Halteres",
+                "Elevação Lateral",
+                "Tríceps Corda",
+            ),
+        ),
+        (
+            "Treino B — Costas e bíceps",
+            (
+                "Puxada Alta",
+                "Remada Baixa",
+                "Remada Unilateral",
+                "Face Pull",
+                "Rosca Direta",
+                "Rosca Martelo",
+            ),
+        ),
+        (
+            "Treino C — Pernas",
+            (
+                "Agachamento Livre",
+                "Leg Press",
+                "Cadeira Extensora",
+                "Stiff",
+                "Mesa Flexora",
+                "Panturrilha em Pé",
+            ),
+        ),
+    )
 
     def setUp(self):
         super().setUp()
@@ -1408,6 +1465,10 @@ class DefaultWorkoutPresetMigrationTests(TransactionTestCase):
         UserModel = old_apps.get_model("auth", "User")
         MuscleGroupOld = old_apps.get_model("core", "MuscleGroup")
         ExerciseOld = old_apps.get_model("core", "Exercise")
+
+        UserModel.objects.all().delete()
+        ExerciseOld.objects.all().delete()
+        MuscleGroupOld.objects.all().delete()
 
         self.user_id = UserModel.objects.create(username="existing_user").pk
         groups = {}
@@ -1438,13 +1499,13 @@ class DefaultWorkoutPresetMigrationTests(TransactionTestCase):
         presets = Preset.objects.filter(user_id=self.user_id)
 
         self.assertEqual(presets.count(), 3)
-        for preset_data in DEFAULT_WORKOUT_PRESETS:
-            entries = presets.get(
-                name=preset_data["name"]
-            ).exercise_entries.select_related("exercise").order_by("order")
+        for preset_name, exercise_names in self.legacy_presets:
+            entries = presets.get(name=preset_name).exercise_entries.select_related(
+                "exercise"
+            ).order_by("order")
             self.assertEqual(
                 list(entries.values_list("exercise__name", flat=True)),
-                list(preset_data["exercises"]),
+                list(exercise_names),
             )
             self.assertTrue(
                 all(
@@ -1453,6 +1514,370 @@ class DefaultWorkoutPresetMigrationTests(TransactionTestCase):
                     for entry in entries
                 )
             )
+
+
+class ReducedCatalogMigrationTests(TransactionTestCase):
+    migrate_from = [("core", "0009_create_default_workout_presets")]
+    migrate_to = [("core", "0011_update_default_workout_presets")]
+
+    legacy_primary_groups = {
+        "Supino Reto com Barra": "Peito",
+        "Supino Inclinado com Halteres": "Peito",
+        "Peck Deck": "Peito",
+        "Desenvolvimento com Halteres": "Ombros",
+        "Elevação Lateral": "Ombros",
+        "Tríceps Corda": "Tríceps",
+        "Puxada Alta": "Costas",
+        "Remada Baixa": "Costas",
+        "Remada Unilateral": "Costas",
+        "Face Pull": "Costas",
+        "Rosca Direta": "Bíceps",
+        "Rosca Martelo": "Bíceps",
+        "Agachamento Livre": "Quadríceps",
+        "Leg Press": "Quadríceps",
+        "Cadeira Extensora": "Quadríceps",
+        "Stiff": "Posterior de Coxa",
+        "Mesa Flexora": "Posterior de Coxa",
+        "Panturrilha em Pé": "Panturrilhas",
+        "Crucifixo": "Peito",
+        "Crossover": "Peito",
+        "Remada Curvada": "Costas",
+        "Remada na Máquina": "Costas",
+        "Desenvolvimento na Máquina": "Ombros",
+        "Tríceps Barra": "Tríceps",
+        "Tríceps Unilateral na Polia": "Tríceps",
+        "Búlgaro": "Quadríceps",
+        "Panturrilha Sentado": "Panturrilhas",
+        "Panturrilha Unilateral em Pé": "Panturrilhas",
+        "Abdominal Crunch": "Abdômen",
+        "Abdução de Quadril na Máquina": "Glúteos",
+        "Supino Declinado com Barra": "Peito",
+        "Crossover Alto": "Peito",
+    }
+    legacy_presets = (
+        (
+            "Treino A — Peito, ombros e tríceps",
+            (
+                "Supino Reto com Barra",
+                "Supino Inclinado com Halteres",
+                "Peck Deck",
+                "Desenvolvimento com Halteres",
+                "Elevação Lateral",
+                "Tríceps Corda",
+            ),
+        ),
+        (
+            "Treino B — Costas e bíceps",
+            (
+                "Puxada Alta",
+                "Remada Baixa",
+                "Remada Unilateral",
+                "Face Pull",
+                "Rosca Direta",
+                "Rosca Martelo",
+            ),
+        ),
+        (
+            "Treino C — Pernas",
+            (
+                "Agachamento Livre",
+                "Leg Press",
+                "Cadeira Extensora",
+                "Stiff",
+                "Mesa Flexora",
+                "Panturrilha em Pé",
+            ),
+        ),
+    )
+
+    def create_preset(self, Preset, PresetEntry, user_id, name, exercise_names):
+        preset = Preset.objects.create(user_id=user_id, name=name)
+        for order, exercise_name in enumerate(exercise_names, start=1):
+            exercise = self.old_exercises[exercise_name]
+            PresetEntry.objects.create(
+                preset=preset,
+                exercise=exercise,
+                muscle_group_id=exercise.primary_muscle_group_id,
+                order=order,
+            )
+        return preset
+
+    def setUp(self):
+        super().setUp()
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        UserModel = old_apps.get_model("auth", "User")
+        MuscleGroupOld = old_apps.get_model("core", "MuscleGroup")
+        ExerciseOld = old_apps.get_model("core", "Exercise")
+        WorkoutOld = old_apps.get_model("core", "Workout")
+        WorkoutExerciseOld = old_apps.get_model("core", "WorkoutExercise")
+        ExerciseSetOld = old_apps.get_model("core", "ExerciseSet")
+        PresetOld = old_apps.get_model("core", "WorkoutPreset")
+        PresetEntryOld = old_apps.get_model("core", "WorkoutPresetExercise")
+
+        UserModel.objects.all().delete()
+        ExerciseOld.objects.all().delete()
+        MuscleGroupOld.objects.all().delete()
+
+        self.groups = {}
+        for order, group_name in enumerate(CATALOG, start=1):
+            self.groups[group_name] = MuscleGroupOld.objects.create(
+                name=group_name,
+                slug=slugify(group_name),
+                order=order,
+                tracking_type="cardio" if group_name == "Cardio" else "strength",
+            )
+
+        self.old_exercises = {}
+        for exercise_name, group_name in self.legacy_primary_groups.items():
+            exercise = ExerciseOld.objects.create(
+                name=exercise_name,
+                primary_muscle_group=self.groups[group_name],
+            )
+            exercise.muscle_groups.add(self.groups[group_name])
+            self.old_exercises[exercise_name] = exercise
+        self.old_exercises["Face Pull"].muscle_groups.add(self.groups["Ombros"])
+        self.old_exercises["Agachamento Livre"].muscle_groups.add(
+            self.groups["Glúteos"]
+        )
+
+        user = UserModel.objects.create(username="catalog_user")
+        other_user = UserModel.objects.create(username="other_catalog_user")
+        self.user_id = user.pk
+        self.other_user_id = other_user.pk
+
+        self.user_legacy_preset_ids = []
+        for preset_name, exercise_names in self.legacy_presets:
+            preset = self.create_preset(
+                PresetOld,
+                PresetEntryOld,
+                user.pk,
+                preset_name,
+                exercise_names,
+            )
+            self.user_legacy_preset_ids.append(preset.pk)
+
+        conflicting_push = self.create_preset(
+            PresetOld,
+            PresetEntryOld,
+            other_user.pk,
+            "Push",
+            ("Puxada Alta",),
+        )
+        self.conflicting_push_id = conflicting_push.pk
+        conflicting_legacy = self.create_preset(
+            PresetOld,
+            PresetEntryOld,
+            other_user.pk,
+            self.legacy_presets[0][0],
+            self.legacy_presets[0][1],
+        )
+        self.conflicting_legacy_id = conflicting_legacy.pk
+        edited_legacy = self.create_preset(
+            PresetOld,
+            PresetEntryOld,
+            other_user.pk,
+            self.legacy_presets[1][0],
+            self.legacy_presets[1][1][:-1],
+        )
+        self.edited_legacy_id = edited_legacy.pk
+
+        stale_exercise = self.old_exercises["Supino Declinado com Barra"]
+        personal_exercise = ExerciseOld.objects.create(
+            user=user,
+            name=stale_exercise.name,
+            primary_muscle_group=self.groups["Peito"],
+        )
+        personal_exercise.muscle_groups.add(self.groups["Peito"])
+        self.personal_exercise_id = personal_exercise.pk
+
+        workout = WorkoutOld.objects.create(user=user, date=date(2026, 8, 20))
+        personal_entry = WorkoutExerciseOld.objects.create(
+            workout=workout,
+            exercise=personal_exercise,
+            muscle_group=self.groups["Peito"],
+            order=1,
+        )
+        ExerciseSetOld.objects.create(
+            workout_exercise=personal_entry,
+            order=1,
+            reps=10,
+            is_working_set=True,
+        )
+        stale_entry = WorkoutExerciseOld.objects.create(
+            workout=workout,
+            exercise=stale_exercise,
+            muscle_group=self.groups["Peito"],
+            order=2,
+        )
+        ExerciseSetOld.objects.create(
+            workout_exercise=stale_entry,
+            order=1,
+            reps=8,
+            is_working_set=True,
+        )
+        self.workout_id = workout.pk
+
+        personal_preset = PresetOld.objects.create(
+            user=user,
+            name="Combinação pessoal",
+        )
+        PresetEntryOld.objects.create(
+            preset=personal_preset,
+            exercise=personal_exercise,
+            muscle_group=self.groups["Peito"],
+            order=1,
+        )
+        PresetEntryOld.objects.create(
+            preset=personal_preset,
+            exercise=stale_exercise,
+            muscle_group=self.groups["Peito"],
+            order=2,
+        )
+        self.personal_preset_id = personal_preset.pk
+
+        other_workout = WorkoutOld.objects.create(
+            user=other_user,
+            date=date(2026, 8, 20),
+        )
+        WorkoutExerciseOld.objects.create(
+            workout=other_workout,
+            exercise=stale_exercise,
+            muscle_group=self.groups["Peito"],
+            order=1,
+        )
+        self.other_workout_id = other_workout.pk
+
+        renamed_exercise = self.old_exercises["Remada Unilateral"]
+        renamed_workout = WorkoutOld.objects.create(
+            user=user,
+            date=date(2026, 8, 21),
+        )
+        WorkoutExerciseOld.objects.create(
+            workout=renamed_workout,
+            exercise=renamed_exercise,
+            muscle_group=self.groups["Costas"],
+            order=1,
+        )
+        self.renamed_exercise_id = renamed_exercise.pk
+        self.renamed_workout_id = renamed_workout.pk
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        self.apps = executor.loader.project_state(self.migrate_to).apps
+
+    def tearDown(self):
+        MigrationExecutor(connection).migrate(self.migrate_to)
+        super().tearDown()
+
+    def test_catalog_is_reduced_and_renames_preserve_ids_and_groups(self):
+        ExerciseNew = self.apps.get_model("core", "Exercise")
+        system_exercises = ExerciseNew.objects.filter(user__isnull=True)
+
+        self.assertEqual(system_exercises.count(), 74)
+        self.assertEqual(
+            set(system_exercises.values_list("name", flat=True)),
+            set(SYSTEM_EXERCISE_NAMES),
+        )
+        renamed = system_exercises.get(name="Remada Unilateral com Halter")
+        self.assertEqual(renamed.pk, self.renamed_exercise_id)
+        for old_name in RENAMED_SYSTEM_EXERCISES:
+            self.assertFalse(system_exercises.filter(name=old_name).exists())
+
+        for exercise_name, group_names in EXERCISE_GROUPS.items():
+            exercise = system_exercises.get(name=exercise_name)
+            expected_primary = PRIMARY_GROUP_OVERRIDES.get(
+                exercise_name, group_names[0]
+            )
+            self.assertEqual(exercise.primary_muscle_group.name, expected_primary)
+            self.assertEqual(
+                set(exercise.muscle_groups.values_list("name", flat=True)),
+                set(group_names),
+            )
+
+    def test_removed_exercises_become_isolated_personal_exercises(self):
+        ExerciseNew = self.apps.get_model("core", "Exercise")
+        WorkoutExerciseNew = self.apps.get_model("core", "WorkoutExercise")
+        ExerciseSetNew = self.apps.get_model("core", "ExerciseSet")
+        PresetEntryNew = self.apps.get_model("core", "WorkoutPresetExercise")
+        stale_name = "Supino Declinado com Barra"
+
+        self.assertFalse(
+            ExerciseNew.objects.filter(user__isnull=True, name=stale_name).exists()
+        )
+        self.assertFalse(ExerciseNew.objects.filter(name="Crossover Alto").exists())
+        personal = ExerciseNew.objects.get(pk=self.personal_exercise_id)
+        other_personal = ExerciseNew.objects.get(
+            user_id=self.other_user_id,
+            name=stale_name,
+        )
+        self.assertNotEqual(personal.pk, other_personal.pk)
+
+        workout_entries = WorkoutExerciseNew.objects.filter(
+            workout_id=self.workout_id
+        )
+        self.assertEqual(workout_entries.count(), 1)
+        self.assertEqual(workout_entries.get().exercise_id, personal.pk)
+        self.assertEqual(
+            list(
+                ExerciseSetNew.objects.filter(
+                    workout_exercise=workout_entries.get()
+                ).values_list("reps", flat=True)
+            ),
+            [10, 8],
+        )
+        self.assertEqual(
+            WorkoutExerciseNew.objects.get(
+                workout_id=self.other_workout_id
+            ).exercise_id,
+            other_personal.pk,
+        )
+        personal_preset_entries = PresetEntryNew.objects.filter(
+            preset_id=self.personal_preset_id
+        )
+        self.assertEqual(personal_preset_entries.count(), 1)
+        self.assertEqual(personal_preset_entries.get().exercise_id, personal.pk)
+        self.assertEqual(personal_preset_entries.get().order, 1)
+
+        renamed_entry = WorkoutExerciseNew.objects.get(
+            workout_id=self.renamed_workout_id
+        )
+        self.assertEqual(renamed_entry.exercise_id, self.renamed_exercise_id)
+        self.assertEqual(renamed_entry.muscle_group.name, "Costas")
+
+    def test_only_untouched_defaults_are_updated(self):
+        PresetNew = self.apps.get_model("core", "WorkoutPreset")
+
+        for preset_data in DEFAULT_WORKOUT_PRESETS:
+            preset = PresetNew.objects.get(
+                user_id=self.user_id,
+                name=preset_data["name"],
+            )
+            self.assertEqual(
+                list(
+                    preset.exercise_entries.order_by("order").values_list(
+                        "exercise__name", flat=True
+                    )
+                ),
+                list(preset_data["exercises"]),
+            )
+
+        self.assertTrue(
+            PresetNew.objects.filter(pk=self.conflicting_push_id, name="Push").exists()
+        )
+        self.assertFalse(
+            PresetNew.objects.filter(pk=self.conflicting_legacy_id).exists()
+        )
+        self.assertTrue(
+            PresetNew.objects.filter(pk=self.edited_legacy_id).exists()
+        )
+        self.assertFalse(
+            PresetNew.objects.filter(
+                user_id=self.other_user_id,
+                name__in=["Pull", "Legs"],
+            ).exists()
+        )
 
 
 @override_settings(
