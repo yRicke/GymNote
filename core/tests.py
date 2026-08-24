@@ -10,6 +10,7 @@ from django.test import RequestFactory, TestCase, TransactionTestCase, override_
 from django.urls import reverse
 
 from . import error_views
+from .default_presets import DEFAULT_WORKOUT_PRESETS
 from .management.commands.seed_gym_data import CATALOG
 from .models import (
     Exercise,
@@ -1207,6 +1208,62 @@ class SeedGymDataTests(TestCase):
         self.assertEqual(bench.muscle_groups.count(), 2)
 
 
+class DefaultWorkoutPresetTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_gym_data")
+        cls.user = User.objects.create_user(
+            "starter_presets",
+            password="senha-teste-123",
+        )
+
+    def test_new_user_receives_three_ordered_default_presets(self):
+        presets = WorkoutPreset.objects.filter(user=self.user)
+
+        self.assertEqual(presets.count(), 3)
+        self.assertEqual(
+            set(presets.values_list("name", flat=True)),
+            {preset_data["name"] for preset_data in DEFAULT_WORKOUT_PRESETS},
+        )
+        for preset_data in DEFAULT_WORKOUT_PRESETS:
+            entries = list(
+                presets.get(name=preset_data["name"])
+                .exercise_entries.select_related("exercise")
+                .order_by("order")
+            )
+            self.assertEqual(
+                [entry.exercise.name for entry in entries],
+                list(preset_data["exercises"]),
+            )
+            self.assertEqual(
+                [entry.order for entry in entries],
+                list(range(1, len(entries) + 1)),
+            )
+            self.assertTrue(
+                all(
+                    entry.muscle_group_id
+                    == entry.exercise.primary_muscle_group_id
+                    for entry in entries
+                )
+            )
+
+    def test_default_preset_can_be_deleted_without_being_recreated(self):
+        preset = WorkoutPreset.objects.filter(user=self.user).first()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "core:personalization_preset_delete",
+                kwargs={"pk": preset.pk},
+            )
+        )
+
+        self.assertRedirects(response, reverse("core:personalization_presets"))
+        self.assertFalse(WorkoutPreset.objects.filter(pk=preset.pk).exists())
+        self.user.save()
+        self.assertEqual(WorkoutPreset.objects.filter(user=self.user).count(), 2)
+
+
 class DailyWorkoutMigrationTests(TransactionTestCase):
     migrate_from = [("core", "0007_cardio_tracking")]
     migrate_to = [("core", "0008_daily_workout_flow")]
@@ -1316,6 +1373,86 @@ class DailyWorkoutMigrationTests(TransactionTestCase):
         )
         self.assertEqual(preset.name, "Push")
         self.assertEqual(preset_entry.muscle_group_id, self.ids["secondary"])
+
+
+class DefaultWorkoutPresetMigrationTests(TransactionTestCase):
+    migrate_from = [("core", "0008_daily_workout_flow")]
+    migrate_to = [("core", "0009_create_default_workout_presets")]
+
+    exercise_groups = {
+        "Supino Reto com Barra": "Peito",
+        "Supino Inclinado com Halteres": "Peito",
+        "Peck Deck": "Peito",
+        "Desenvolvimento com Halteres": "Ombros",
+        "Elevação Lateral": "Ombros",
+        "Tríceps Corda": "Tríceps",
+        "Puxada Alta": "Costas",
+        "Remada Baixa": "Costas",
+        "Remada Unilateral": "Costas",
+        "Face Pull": "Costas",
+        "Rosca Direta": "Bíceps",
+        "Rosca Martelo": "Bíceps",
+        "Agachamento Livre": "Quadríceps",
+        "Leg Press": "Quadríceps",
+        "Cadeira Extensora": "Quadríceps",
+        "Stiff": "Posterior de Coxa",
+        "Mesa Flexora": "Posterior de Coxa",
+        "Panturrilha em Pé": "Panturrilhas",
+    }
+
+    def setUp(self):
+        super().setUp()
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        UserModel = old_apps.get_model("auth", "User")
+        MuscleGroupOld = old_apps.get_model("core", "MuscleGroup")
+        ExerciseOld = old_apps.get_model("core", "Exercise")
+
+        self.user_id = UserModel.objects.create(username="existing_user").pk
+        groups = {}
+        for order, group_name in enumerate(
+            dict.fromkeys(self.exercise_groups.values()), start=1
+        ):
+            groups[group_name] = MuscleGroupOld.objects.create(
+                name=group_name,
+                slug=f"default-group-{order}",
+                order=order,
+            )
+        for exercise_name, group_name in self.exercise_groups.items():
+            ExerciseOld.objects.create(
+                name=exercise_name,
+                primary_muscle_group=groups[group_name],
+            )
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        self.apps = executor.loader.project_state(self.migrate_to).apps
+
+    def tearDown(self):
+        MigrationExecutor(connection).migrate(self.migrate_to)
+        super().tearDown()
+
+    def test_migration_adds_defaults_to_existing_users(self):
+        Preset = self.apps.get_model("core", "WorkoutPreset")
+        presets = Preset.objects.filter(user_id=self.user_id)
+
+        self.assertEqual(presets.count(), 3)
+        for preset_data in DEFAULT_WORKOUT_PRESETS:
+            entries = presets.get(
+                name=preset_data["name"]
+            ).exercise_entries.select_related("exercise").order_by("order")
+            self.assertEqual(
+                list(entries.values_list("exercise__name", flat=True)),
+                list(preset_data["exercises"]),
+            )
+            self.assertTrue(
+                all(
+                    entry.muscle_group_id
+                    == entry.exercise.primary_muscle_group_id
+                    for entry in entries
+                )
+            )
 
 
 @override_settings(
