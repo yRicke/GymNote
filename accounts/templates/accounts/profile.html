@@ -19,6 +19,21 @@
         <div class="account-row"><span>Nome de usuário</span><strong>{{ user.username }}</strong></div>
         <div class="account-row"><span>E-mail</span><strong>{{ user.email|default:"Não informado" }}</strong></div>
     </section>
+    <section class="panel account-panel">
+        <div class="section-heading"><h2>Segurança</h2><span class="material-symbols-outlined" aria-hidden="true">password</span></div>
+        <form method="post" action="{% url 'accounts:profile' %}" class="app-form">
+            {% csrf_token %}
+            {% for field in password_form %}
+                <div class="field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            {% endfor %}
+            {% for error in password_form.non_field_errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            <button class="button button--primary button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">key</span> Alterar senha</button>
+        </form>
+    </section>
     <form method="post" action="{% url 'accounts:logout' %}">
         {% csrf_token %}
         <button class="button button--ghost button--full" type="submit"><span class="material-symbols-outlined" aria-hidden="true">logout</span> Sair da conta</button>

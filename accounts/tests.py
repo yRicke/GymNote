@@ -53,3 +53,38 @@ class AccountsViewsTests(TestCase):
 
         self.assertEqual(response.context["workout_count"], 1)
         self.assertTrue(Workout.objects.filter(pk=empty_workout.pk).exists())
+
+    def test_user_can_change_password_without_losing_session(self):
+        user = User.objects.create_user("troca_senha", password="senha-antiga-123")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("accounts:profile"),
+            {
+                "old_password": "senha-antiga-123",
+                "new_password1": "senha-nova-segura-456",
+                "new_password2": "senha-nova-segura-456",
+            },
+        )
+
+        self.assertRedirects(response, reverse("accounts:profile"))
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("senha-nova-segura-456"))
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_password_change_rejects_wrong_current_password(self):
+        user = User.objects.create_user("senha_invalida", password="senha-antiga-123")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("accounts:profile"),
+            {
+                "old_password": "senha-errada",
+                "new_password1": "senha-nova-segura-456",
+                "new_password2": "senha-nova-segura-456",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("senha-antiga-123"))
