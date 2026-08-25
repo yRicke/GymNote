@@ -11,10 +11,13 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import secrets
 import sys
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.csp import CSP
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,14 +26,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'REMOVED_DJANGO_SECRET_KEY',
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('VERCEL_ENV') is None
+IS_PRODUCTION = bool(os.environ.get('VERCEL_ENV'))
+DEBUG = os.environ.get('DJANGO_DEBUG', str(not IS_PRODUCTION)).lower() in {
+    '1',
+    'true',
+    'yes',
+}
+
+# Production must never silently fall back to a key committed to source control.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if IS_PRODUCTION:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY is required in production.')
+    SECRET_KEY = secrets.token_urlsafe(64)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', '192.168.100.94']
 
@@ -54,9 +63,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.DatabaseUserContextMiddleware',
     'core.middleware.RateLimitMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'setup.urls'
@@ -82,11 +93,22 @@ WSGI_APPLICATION = 'setup.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-database_url = (
-    os.environ.get('DATABASE_URL')
-    if 'collectstatic' not in sys.argv
-    else None
-)
+database_admin_commands = {
+    'migrate',
+    'provision_database_runtime_role',
+    'seed_gym_data',
+}
+management_command = sys.argv[1] if len(sys.argv) > 1 else None
+database_url = None
+if 'collectstatic' not in sys.argv:
+    if management_command in database_admin_commands:
+        database_url = os.environ.get('DATABASE_ADMIN_URL') or os.environ.get(
+            'DATABASE_URL'
+        )
+    else:
+        database_url = os.environ.get('DATABASE_RUNTIME_URL') or os.environ.get(
+            'DATABASE_URL'
+        )
 if database_url:
     DATABASES = {
         'default': dj_database_url.parse(
@@ -146,6 +168,35 @@ LOGIN_REDIRECT_URL = 'core:calendar'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 CSRF_FAILURE_VIEW = 'core.error_views.csrf_failure'
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = IS_PRODUCTION
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_HSTS_SECONDS = 31_536_000 if IS_PRODUCTION else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
+SECURE_HSTS_PRELOAD = IS_PRODUCTION
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+SECURE_CSP = {
+    'default-src': [CSP.SELF],
+    'base-uri': [CSP.NONE],
+    'connect-src': [CSP.SELF],
+    'font-src': [CSP.SELF, 'https://fonts.gstatic.com'],
+    'form-action': [CSP.SELF],
+    'frame-ancestors': [CSP.NONE],
+    'img-src': [CSP.SELF, 'data:'],
+    'object-src': [CSP.NONE],
+    'script-src': [CSP.SELF, 'https://cdn.jsdelivr.net'],
+    # Drag previews and parallax effects update element styles at runtime.
+    'style-src': [CSP.SELF, CSP.UNSAFE_INLINE, 'https://fonts.googleapis.com'],
+}
+
 GYMNOTE_RATE_LIMITS = {
     'auth': {'limit': 10, 'window_seconds': 300},
     'write': {'limit': 60, 'window_seconds': 60},
@@ -157,6 +208,13 @@ GYMNOTE_RATE_LIMITS = {
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': os.environ.get(
+            'DJANGO_MAILER_BACKEND',
+            (
+                'django.core.mail.backends.smtp.EmailBackend'
+                if IS_PRODUCTION
+                else 'django.core.mail.backends.console.EmailBackend'
+            ),
+        ),
     },
 }

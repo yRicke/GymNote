@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import reverse
 
@@ -6,6 +9,14 @@ from core.models import Exercise, MuscleGroup, Workout, WorkoutExercise
 
 
 class AccountsViewsTests(TestCase):
+    def test_register_template_does_not_disable_autoescaping(self):
+        template = Path(
+            finders.find("accounts/register.html")
+            or Path(__file__).parent / "templates/accounts/register.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("|safe", template)
+
     def test_register_creates_and_authenticates_user(self):
         response = self.client.post(
             reverse("accounts:register"),

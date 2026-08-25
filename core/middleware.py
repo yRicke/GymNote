@@ -1,7 +1,25 @@
 from django.conf import settings
+from django.db import transaction
 
+from .db_security import database_user_context
 from .error_views import too_many_requests
 from .rate_limit import client_identity, consume_rate_limit
+
+
+class DatabaseUserContextMiddleware:
+    """Wrap each request in the PostgreSQL user context used by RLS."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if transaction.get_connection().vendor != "postgresql":
+            return self.get_response(request)
+
+        # Resolve the lazy user before tenant-table policies are active.
+        user = request.user
+        with transaction.atomic(), database_user_context(user):
+            return self.get_response(request)
 
 
 class RateLimitMiddleware:

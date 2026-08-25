@@ -94,6 +94,55 @@
             clearSearch.hidden = !query;
             status.textContent = `${visibleCount} exercício${visibleCount === 1 ? "" : "s"} encontrado${visibleCount === 1 ? "" : "s"}.`;
         };
+        const renderSearchResults = (exercises) => {
+            resultsContainer.replaceChildren();
+            if (!exercises.length) {
+                const empty = document.createElement("p");
+                empty.className = "muted";
+                empty.textContent = "Nenhum exercício disponível para a busca atual.";
+                resultsContainer.append(empty);
+                return;
+            }
+
+            const choiceList = document.createElement("div");
+            choiceList.className = "choice-list choice-list--exercises";
+            const optionsRoot = document.createElement("div");
+            exercises.forEach((exercise) => {
+                const row = document.createElement("div");
+                const label = document.createElement("label");
+                const input = document.createElement("input");
+                const name = document.createElement("span");
+                const metadata = document.createElement("span");
+                const group = document.createElement("span");
+
+                input.type = "checkbox";
+                input.name = "exercises";
+                input.value = String(exercise.id);
+                input.id = `id_exercises_search_${exercise.id}`;
+                label.htmlFor = input.id;
+
+                name.className = "exercise-choice__name";
+                name.textContent = exercise.name;
+                metadata.className = "exercise-choice__meta";
+                if (exercise.is_custom) {
+                    const personal = document.createElement("span");
+                    personal.className = "exercise-choice__personal material-symbols-outlined";
+                    personal.textContent = "person";
+                    personal.setAttribute("role", "img");
+                    personal.setAttribute("aria-label", "Exercício pessoal");
+                    personal.title = "Exercício pessoal";
+                    metadata.append(personal);
+                }
+                group.className = "exercise-choice__group";
+                group.textContent = exercise.group;
+                metadata.append(group);
+                label.append(input, name, metadata);
+                row.append(label);
+                optionsRoot.append(row);
+            });
+            choiceList.append(optionsRoot);
+            resultsContainer.append(choiceList);
+        };
         const performSearch = async () => {
             if (!searchUrl) {
                 filterLocalOptions();
@@ -121,7 +170,7 @@
                 if (!response.ok) throw new Error("Não foi possível atualizar a busca.");
                 const data = await response.json();
                 if (requestId !== requestSequence) return;
-                resultsContainer.innerHTML = data.html;
+                renderSearchResults(data.exercises);
                 restoreSelections();
                 countBadge.textContent = `${data.count} ${data.count === 1 ? "disponível" : "disponíveis"}`;
                 clearSearch.hidden = !data.query;

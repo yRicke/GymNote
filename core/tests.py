@@ -67,6 +67,15 @@ class LandingPageTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response.url)
 
+    def test_security_headers_are_enforced(self):
+        response = self.client.get(reverse("core:landing"))
+
+        policy = response.headers["Content-Security-Policy"]
+        self.assertIn("default-src 'self'", policy)
+        self.assertIn("object-src 'none'", policy)
+        self.assertIn("frame-ancestors 'none'", policy)
+        self.assertEqual(response.headers["X-Frame-Options"], "DENY")
+
 
 @override_settings(DEBUG=False)
 class ErrorPageTests(TestCase):
@@ -229,8 +238,33 @@ class WorkoutFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["count"], 1)
-        self.assertIn("Supino Reto", response.json()["html"])
-        self.assertNotIn("Agachamento Livre", response.json()["html"])
+        self.assertEqual(
+            response.json()["exercises"],
+            [
+                {
+                    "id": self.bench.pk,
+                    "name": "Supino Reto",
+                    "is_custom": False,
+                    "group": "Peito",
+                }
+            ],
+        )
+        self.assertNotIn("html", response.json())
+
+    def test_live_search_keeps_user_content_as_json_data(self):
+        unsafe_name = '<img src=x onerror="alert(1)">'
+        create_exercise(unsafe_name, self.quadriceps, user=self.user)
+        url = reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+
+        response = self.client.get(
+            url, {"q": "onerror"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["exercises"][0]["name"], unsafe_name)
+        javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        self.assertNotIn("innerHTML", javascript)
+        self.assertIn("name.textContent = exercise.name", javascript)
 
     def test_summary_and_descriptions_adapt_to_strength_and_cardio(self):
         workout = Workout.objects.create(user=self.user, date=self.workout_date)

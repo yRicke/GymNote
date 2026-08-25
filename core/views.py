@@ -8,7 +8,6 @@ from django.db import transaction
 from django.db.models import Count, F, Max, Prefetch, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -530,14 +529,19 @@ def workout_day(request, date_str):
     exercise_form = ExerciseSelectionForm(queryset=available_exercises)
     exercise_count = available_exercises.count()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        exercises = [
+            {
+                "id": exercise.pk,
+                "name": exercise.name,
+                "is_custom": exercise.is_custom,
+                "group": exercise.primary_muscle_group.name,
+            }
+            for exercise in available_exercises
+        ]
         return JsonResponse(
             {
-                "html": render_to_string(
-                    "core/includes/exercise_catalog_results.html",
-                    {"exercise_form": exercise_form},
-                    request=request,
-                ),
-                "count": exercise_count,
+                "exercises": exercises,
+                "count": len(exercises),
                 "query": query,
             }
         )
