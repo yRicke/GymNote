@@ -903,9 +903,19 @@ class WorkoutFlowTests(TestCase):
         self.assertContains(response, 'data-nested-dialog-open="delete-dialog" hidden')
         self.assertNotContains(response, 'class="content-section panel set-entry"')
         javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        css = Path(finders.find("core/css/app.css")).read_text(encoding="utf-8")
         self.assertIn("configureSetDialog(dialog, opener)", javascript)
         self.assertIn("configureDeleteDialog(childDialog, opener)", javascript)
         self.assertIn("exerciseSetValues[opener.dataset.setId]", javascript)
+        self.assertIn(
+            ".set-form-dialog__actions { display: grid; width: 100%; "
+            "grid-template-columns: minmax(0, 1fr); gap: 10px; }",
+            css,
+        )
+        self.assertIn(
+            ".set-form-dialog__primary-actions .button { width: 100%; }",
+            css,
+        )
         self.assertEqual(
             response.context["exercise_set_values"][str(exercise_set.pk)],
             {

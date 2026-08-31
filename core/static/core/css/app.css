@@ -896,8 +896,9 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
     .preset-dialog__actions { grid-template-columns: 1fr; }
     .preset-dialog__actions .button--primary,
     .preset-dialog__actions .button--danger { grid-row: 1; }
-    .set-form-dialog__actions { display: grid; gap: 10px; }
-    .set-form-dialog__primary-actions { width: 100%; grid-row: 1; }
+    .set-form-dialog__actions { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .set-form-dialog__primary-actions { width: 100%; grid-template-columns: minmax(0, 1fr); grid-row: 1; }
+    .set-form-dialog__primary-actions .button { width: 100%; }
     .set-form-dialog__delete { width: 100%; grid-row: 2; }
     .previous-workout-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
     .previous-workout-summary__item { min-width: 0; min-height: 88px; padding: 10px 8px; }
