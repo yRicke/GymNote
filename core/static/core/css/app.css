@@ -900,7 +900,7 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
     .set-form-dialog__primary-actions { width: 100%; grid-row: 1; }
     .set-form-dialog__delete { width: 100%; grid-row: 2; }
     .previous-workout-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-    .previous-workout-summary__item { min-width: 0; min-height: 88px; padding: 10px 8px; }
+    .previous-workout-summary__item { min-height: 88px; padding: 10px 8px; }
     .previous-workout-summary__item > span { font-size: .52rem; letter-spacing: .03em; white-space: nowrap; }
     .previous-workout-summary__item strong { font-size: clamp(.84rem, 3.8vw, 1rem); line-height: 1.15; }
     .exercise-catalog-dialog { width: 100%; max-width: none; }
