@@ -547,6 +547,7 @@
         const tableBody = previousWorkoutDialog.querySelector(
             "[data-previous-workout-table-body]",
         );
+        const previousWorkoutTable = tableBody.closest("table");
         const retryButton = previousWorkoutDialog.querySelector(
             "[data-previous-workout-retry]",
         );
@@ -586,6 +587,10 @@
             const columns = data.is_cardio
                 ? ["Registro", "Min", "km", "Esforço"]
                 : ["Série", "kg", "Reps", "Parciais", "Válida"];
+            previousWorkoutTable.classList.toggle(
+                "sets-table--cardio",
+                data.is_cardio,
+            );
             tableHead.replaceChildren();
             columns.forEach((column) => {
                 tableHead.append(createTextElement("th", column));
@@ -594,6 +599,9 @@
             tableBody.replaceChildren();
             data.sets.forEach((exerciseSet) => {
                 const row = document.createElement("tr");
+                if (!data.is_cardio && exerciseSet.is_working_set) {
+                    row.classList.add("is-working");
+                }
                 const values = data.is_cardio
                     ? [
                         exerciseSet.order,
@@ -611,11 +619,33 @@
                         exerciseSet.is_working_set ? "Sim" : "Não",
                     ];
                 values.forEach((value, index) => {
-                    const cell = createTextElement("td", value ?? "—");
-                    if (!data.is_cardio && index === values.length - 1) {
-                        cell.className = exerciseSet.is_working_set
-                            ? "is-working-set"
-                            : "";
+                    const cell = document.createElement("td");
+                    if (index === 0) {
+                        cell.append(
+                            createTextElement("span", value ?? "—", "set-number"),
+                        );
+                    } else if (!data.is_cardio && index === values.length - 1) {
+                        const mark = document.createElement("span");
+                        mark.className = `working-mark previous-working-mark${exerciseSet.is_working_set ? " is-active" : ""}`;
+                        const icon = createTextElement(
+                            "span",
+                            "check",
+                            "material-symbols-outlined",
+                        );
+                        icon.setAttribute("aria-hidden", "true");
+                        mark.append(
+                            icon,
+                            createTextElement(
+                                "span",
+                                exerciseSet.is_working_set ? "Sim" : "Não",
+                                "sr-only",
+                            ),
+                        );
+                        cell.append(mark);
+                    } else if (index === 1 || index === 2) {
+                        cell.append(createTextElement("strong", value ?? "—"));
+                    } else {
+                        cell.textContent = value ?? "—";
                     }
                     row.append(cell);
                 });

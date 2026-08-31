@@ -681,11 +681,11 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
 .previous-workout-summary__item strong { font-size: .9rem; }
 .previous-workout-sets-heading { display: flex; margin-top: 2px; align-items: center; justify-content: space-between; gap: 12px; }
 .previous-workout-sets-heading h3 { margin: 0; font-size: 1rem; }
-.previous-workout-table-wrap { width: 100%; overflow-x: auto; border-radius: var(--radius-md); background: var(--surface-low); }
-.previous-workout-table { width: 100%; min-width: 480px; border-collapse: collapse; }
-.previous-workout-table th { height: 38px; padding: 0 9px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: .59rem; font-weight: 500; letter-spacing: .06em; text-align: center; text-transform: uppercase; }
-.previous-workout-table td { height: 48px; padding: 7px 9px; border-top: 1px solid var(--surface-high); font-size: .82rem; text-align: center; }
-.previous-workout-table td.is-working-set { color: var(--accent); font-weight: 700; }
+.previous-workout-table.sets-table { min-width: 480px; }
+.previous-workout-table.sets-table th { height: 38px; padding: 0 9px; font-size: .59rem; }
+.previous-workout-table.sets-table td { height: 48px; padding: 7px 9px; font-size: .82rem; }
+.previous-workout-table .previous-working-mark { width: 24px; height: 24px; }
+.previous-workout-table .previous-working-mark .material-symbols-outlined { font-size: 16px; }
 .previous-workout-dialog__actions { margin-top: 18px; }
 
 @keyframes history-spin {
