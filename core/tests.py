@@ -551,6 +551,252 @@ class WorkoutFlowTests(TestCase):
         self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
         self.assertFalse(ExerciseSet.objects.exists())
 
+    def test_exercise_detail_exposes_lazy_previous_workout_dialog(self):
+        _, entry = self.create_entry()
+        previous_workout = Workout.objects.create(
+            user=self.user,
+            date=date(2026, 8, 1),
+        )
+        previous_entry = WorkoutExercise.objects.create(
+            workout=previous_workout,
+            exercise=self.squat,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=previous_entry,
+            order=1,
+            weight_kg="123.45",
+            reps=5,
+            is_working_set=True,
+        )
+        history_url = reverse(
+            "core:previous_workout_summary",
+            kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+        )
+
+        response = self.client.get(
+            reverse(
+                "core:workout_exercise",
+                kwargs={"date_str": "2026-08-14", "pk": entry.pk},
+            )
+        )
+
+        self.assertContains(response, 'data-dialog-open="previous-workout-dialog"')
+        self.assertContains(response, f'data-previous-workout-url="{history_url}"')
+        self.assertContains(response, "Ver último treino")
+        self.assertContains(response, 'id="previous-workout-dialog"', count=1)
+        self.assertNotContains(response, "123,45 kg")
+        javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        self.assertIn("previousWorkoutTrigger.addEventListener", javascript)
+        self.assertIn("previousWorkoutLoaded", javascript)
+
+    def test_previous_workout_summary_uses_latest_entry_with_sets(self):
+        _, current_entry = self.create_entry()
+
+        previous_workout = Workout.objects.create(
+            user=self.user,
+            date=date(2026, 8, 1),
+        )
+        previous_entry = WorkoutExercise.objects.create(
+            workout=previous_workout,
+            exercise=self.squat,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        ExerciseSet.objects.bulk_create(
+            [
+                ExerciseSet(
+                    workout_exercise=previous_entry,
+                    order=1,
+                    weight_kg=120,
+                    reps=2,
+                    is_working_set=False,
+                ),
+                ExerciseSet(
+                    workout_exercise=previous_entry,
+                    order=2,
+                    weight_kg=80,
+                    reps=10,
+                    is_working_set=True,
+                ),
+                ExerciseSet(
+                    workout_exercise=previous_entry,
+                    order=3,
+                    weight_kg=90,
+                    reps=8,
+                    partial_reps=1,
+                    is_working_set=True,
+                ),
+            ]
+        )
+
+        blank_workout = Workout.objects.create(
+            user=self.user,
+            date=date(2026, 8, 10),
+        )
+        WorkoutExercise.objects.create(
+            workout=blank_workout,
+            exercise=self.squat,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+
+        other_exercise_workout = Workout.objects.create(
+            user=self.user,
+            date=date(2026, 8, 12),
+        )
+        other_exercise_entry = WorkoutExercise.objects.create(
+            workout=other_exercise_workout,
+            exercise=self.bench,
+            muscle_group=self.chest,
+            order=1,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=other_exercise_entry,
+            order=1,
+            weight_kg=150,
+            reps=5,
+            is_working_set=True,
+        )
+
+        foreign_workout = Workout.objects.create(
+            user=self.other_user,
+            date=date(2026, 8, 13),
+        )
+        foreign_entry = WorkoutExercise.objects.create(
+            workout=foreign_workout,
+            exercise=self.squat,
+            muscle_group=self.quadriceps,
+            order=1,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=foreign_entry,
+            order=1,
+            weight_kg=200,
+            reps=5,
+            is_working_set=True,
+        )
+
+        response = self.client.get(
+            reverse(
+                "core:previous_workout_summary",
+                kwargs={"date_str": "2026-08-14", "pk": current_entry.pk},
+            )
+        )
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["has_history"])
+        self.assertEqual(data["date"], "2026-08-01")
+        self.assertEqual(data["relative_label"], "Há 1 semana")
+        self.assertEqual(
+            data["summary_items"],
+            [
+                {"label": "Top set", "value": "90 kg × 8 reps"},
+                {"label": "Média de trabalho", "value": "85 kg × 9 reps"},
+            ],
+        )
+        self.assertEqual([item["order"] for item in data["sets"]], [1, 2, 3])
+        self.assertEqual(data["sets"][2]["partial_reps"], 1)
+
+    def test_previous_workout_summary_reports_empty_history(self):
+        _, current_entry = self.create_entry()
+        ExerciseSet.objects.create(
+            workout_exercise=current_entry,
+            order=1,
+            weight_kg=80,
+            reps=8,
+        )
+
+        response = self.client.get(
+            reverse(
+                "core:previous_workout_summary",
+                kwargs={"date_str": "2026-08-14", "pk": current_entry.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "ok": True,
+                "has_history": False,
+                "message": "Nenhuma série anterior encontrada para este exercício.",
+            },
+        )
+
+    def test_previous_cardio_summary_adapts_metrics_and_rows(self):
+        workout = Workout.objects.create(user=self.user, date=self.workout_date)
+        current_entry = WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.run,
+            muscle_group=self.cardio,
+            order=1,
+        )
+        previous_workout = Workout.objects.create(
+            user=self.user,
+            date=date(2026, 8, 7),
+        )
+        previous_entry = WorkoutExercise.objects.create(
+            workout=previous_workout,
+            exercise=self.run,
+            muscle_group=self.cardio,
+            order=1,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=previous_entry,
+            order=1,
+            duration_minutes=20,
+            distance_km="3.25",
+            perceived_exertion=6,
+        )
+        ExerciseSet.objects.create(
+            workout_exercise=previous_entry,
+            order=2,
+            duration_minutes=10,
+            perceived_exertion=8,
+        )
+
+        response = self.client.get(
+            reverse(
+                "core:previous_workout_summary",
+                kwargs={"date_str": "2026-08-14", "pk": current_entry.pk},
+            )
+        )
+        data = response.json()
+
+        self.assertTrue(data["is_cardio"])
+        self.assertEqual(data["relative_label"], "Há 1 semana")
+        self.assertEqual(
+            data["summary_items"],
+            [
+                {"label": "Duração total", "value": "30 min"},
+                {"label": "Distância total", "value": "3,25 km"},
+                {"label": "Esforço médio", "value": "7/10"},
+            ],
+        )
+        self.assertEqual(len(data["sets"]), 2)
+
+    def test_previous_workout_summary_checks_owner_and_date(self):
+        _, foreign_entry = self.create_entry(user=self.other_user)
+        _, owned_entry = self.create_entry()
+        foreign_url = reverse(
+            "core:previous_workout_summary",
+            kwargs={"date_str": "2026-08-14", "pk": foreign_entry.pk},
+        )
+
+        foreign_response = self.client.get(foreign_url)
+        wrong_date_response = self.client.get(
+            reverse(
+                "core:previous_workout_summary",
+                kwargs={"date_str": "2026-08-13", "pk": owned_entry.pk},
+            )
+        )
+
+        self.assertEqual(foreign_response.status_code, 404)
+        self.assertEqual(wrong_date_response.status_code, 404)
+
     def test_workout_day_exercise_removal_uses_modal_and_returns_json(self):
         workout, entry = self.create_entry()
         url = reverse(

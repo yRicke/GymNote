@@ -1,6 +1,7 @@
 import calendar
 import json
 from datetime import date
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .forms import (
     CustomExerciseForm,
@@ -827,6 +828,204 @@ def remove_exercise(request, date_str, pk):
 def workout_exercise_detail(request, date_str, pk):
     workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
     return _render_workout_exercise(request, workout_exercise)
+
+
+def _format_history_number(value):
+    if value is None:
+        return "—"
+    formatted = format(value, "f")
+    if "." in formatted:
+        formatted = formatted.rstrip("0").rstrip(".")
+    return formatted.replace(".", ",")
+
+
+def _history_relative_label(current_date, previous_date):
+    days_ago = (current_date - previous_date).days
+    if days_ago == 1:
+        return "Há 1 dia"
+    if days_ago < 7:
+        return f"Há {days_ago} dias"
+    weeks_ago = days_ago // 7
+    if weeks_ago == 1:
+        return "Há 1 semana"
+    return f"Há {weeks_ago} semanas"
+
+
+def _strength_history_payload(exercise_sets):
+    complete_sets = [
+        exercise_set
+        for exercise_set in exercise_sets
+        if exercise_set.weight_kg is not None and exercise_set.reps is not None
+    ]
+    working_sets = [
+        exercise_set for exercise_set in complete_sets if exercise_set.is_working_set
+    ]
+    top_candidates = working_sets or complete_sets
+    top_set = (
+        max(
+            top_candidates,
+            key=lambda exercise_set: (exercise_set.weight_kg, exercise_set.reps),
+        )
+        if top_candidates
+        else None
+    )
+    average_weight = (
+        sum(
+            (exercise_set.weight_kg for exercise_set in working_sets),
+            start=Decimal("0"),
+        )
+        / len(working_sets)
+        if working_sets
+        else None
+    )
+    average_reps = (
+        Decimal(sum(exercise_set.reps for exercise_set in working_sets))
+        / len(working_sets)
+        if working_sets
+        else None
+    )
+    return {
+        "summary_items": [
+            {
+                "label": "Top set",
+                "value": (
+                    f"{_format_history_number(top_set.weight_kg)} kg × "
+                    f"{top_set.reps} reps"
+                    if top_set
+                    else "Sem carga registrada"
+                ),
+            },
+            {
+                "label": "Média de trabalho",
+                "value": (
+                    f"{_format_history_number(average_weight)} kg × "
+                    f"{_format_history_number(average_reps)} reps"
+                    if working_sets
+                    else "Sem séries válidas"
+                ),
+            },
+        ],
+        "sets": [
+            {
+                "order": exercise_set.order,
+                "weight_kg": _format_history_number(exercise_set.weight_kg),
+                "reps": exercise_set.reps if exercise_set.reps is not None else "—",
+                "partial_reps": (
+                    exercise_set.partial_reps
+                    if exercise_set.partial_reps is not None
+                    else "—"
+                ),
+                "is_working_set": exercise_set.is_working_set,
+            }
+            for exercise_set in exercise_sets
+        ],
+    }
+
+
+def _cardio_history_payload(exercise_sets):
+    total_duration = sum(
+        exercise_set.duration_minutes or 0 for exercise_set in exercise_sets
+    )
+    distances = [
+        exercise_set.distance_km
+        for exercise_set in exercise_sets
+        if exercise_set.distance_km is not None
+    ]
+    exertions = [
+        exercise_set.perceived_exertion
+        for exercise_set in exercise_sets
+        if exercise_set.perceived_exertion is not None
+    ]
+    average_exertion = (
+        Decimal(sum(exertions)) / len(exertions) if exertions else None
+    )
+    return {
+        "summary_items": [
+            {"label": "Duração total", "value": f"{total_duration} min"},
+            {
+                "label": "Distância total",
+                "value": (
+                    f"{_format_history_number(sum(distances, start=Decimal('0')))} km"
+                    if distances
+                    else "Não registrada"
+                ),
+            },
+            {
+                "label": "Esforço médio",
+                "value": (
+                    f"{_format_history_number(average_exertion)}/10"
+                    if exertions
+                    else "Não registrado"
+                ),
+            },
+        ],
+        "sets": [
+            {
+                "order": exercise_set.order,
+                "duration_minutes": exercise_set.duration_minutes,
+                "distance_km": _format_history_number(exercise_set.distance_km),
+                "perceived_exertion": (
+                    exercise_set.perceived_exertion
+                    if exercise_set.perceived_exertion is not None
+                    else "—"
+                ),
+            }
+            for exercise_set in exercise_sets
+        ],
+    }
+
+
+@require_GET
+@login_required
+def previous_workout_summary(request, date_str, pk):
+    workout_exercise = _owned_workout_exercise(request.user, date_str, pk)
+    previous_entry = (
+        WorkoutExercise.objects.select_related("workout", "muscle_group")
+        .filter(
+            workout__user=request.user,
+            workout__date__lt=workout_exercise.workout.date,
+            exercise_id=workout_exercise.exercise_id,
+            sets__isnull=False,
+        )
+        .distinct()
+        .order_by("-workout__date")
+        .first()
+    )
+    if previous_entry is None:
+        empty_message = (
+            "Nenhum registro anterior encontrado para este exercício."
+            if workout_exercise.muscle_group.is_cardio
+            else "Nenhuma série anterior encontrada para este exercício."
+        )
+        return JsonResponse(
+            {
+                "ok": True,
+                "has_history": False,
+                "message": empty_message,
+            }
+        )
+
+    exercise_sets = list(previous_entry.sets.all())
+    is_cardio = previous_entry.muscle_group.is_cardio
+    history_payload = (
+        _cardio_history_payload(exercise_sets)
+        if is_cardio
+        else _strength_history_payload(exercise_sets)
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "has_history": True,
+            "is_cardio": is_cardio,
+            "date": previous_entry.workout.date.isoformat(),
+            "date_label": previous_entry.workout.date.strftime("%d/%m/%Y"),
+            "relative_label": _history_relative_label(
+                workout_exercise.workout.date,
+                previous_entry.workout.date,
+            ),
+            **history_payload,
+        }
+    )
 
 
 def _exercise_set_form_values(exercise_set):

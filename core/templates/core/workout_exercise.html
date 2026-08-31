@@ -12,6 +12,11 @@
 <div class="page-shell workout-log">
     <section class="page-heading">
         <h1>{{ workout_exercise.exercise.name }}</h1>
+        <button class="previous-workout-trigger" type="button" data-dialog-open="previous-workout-dialog" data-previous-workout-open data-previous-workout-url="{% url 'core:previous_workout_summary' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}">
+            <span class="previous-workout-trigger__icon material-symbols-outlined" aria-hidden="true">history</span>
+            <span class="previous-workout-trigger__copy"><small>Resumo anterior</small><strong>Ver último treino</strong></span>
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+        </button>
         <div class="metrics-row">
             {% if is_cardio %}
                 <div class="metric-tile"><span>Registros</span><strong>{{ exercise_sets|length }}</strong></div>
@@ -66,6 +71,7 @@
     <button class="button button--primary button--full" type="button" data-dialog-open="set-form-dialog" data-set-form-mode="add" data-set-action="{% url 'core:add_set' date_str=workout_exercise.workout.date|date:'Y-m-d' pk=workout_exercise.pk %}" data-set-title="Adicionar {% if is_cardio %}registro{% else %}série{% endif %}" data-set-eyebrow="{% if is_cardio %}Nova atividade{% else %}Próxima série{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar {% if is_cardio %}registro{% else %}série{% endif %}</button>
 
     {{ exercise_set_values|json_script:"exercise-set-form-values" }}
+    {% include "core/includes/previous_workout_dialog.html" %}
     {% include "core/includes/set_form_dialog.html" %}
     {% include "core/includes/delete_dialog.html" %}
 </div>

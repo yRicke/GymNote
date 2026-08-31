@@ -1,0 +1,48 @@
+<dialog class="preset-dialog previous-workout-dialog" id="previous-workout-dialog" aria-labelledby="previous-workout-dialog-title">
+    <div class="preset-dialog__surface">
+        <div class="preset-dialog__heading">
+            <span class="preset-dialog__icon material-symbols-outlined" aria-hidden="true">history</span>
+            <div>
+                <p class="eyebrow eyebrow--accent">Referência de carga</p>
+                <h2 id="previous-workout-dialog-title">Último treino</h2>
+            </div>
+            <button class="icon-button" type="button" data-dialog-close aria-label="Fechar"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+        </div>
+
+        <div class="previous-workout-state" data-previous-workout-state="loading" role="status">
+            <span class="material-symbols-outlined is-spinning" aria-hidden="true">progress_activity</span>
+            <p>Buscando o último treino…</p>
+        </div>
+
+        <div class="previous-workout-state" data-previous-workout-state="empty" role="status" hidden>
+            <span class="material-symbols-outlined" aria-hidden="true">history_toggle_off</span>
+            <p data-previous-workout-empty-message>Nenhuma série anterior encontrada para este exercício.</p>
+        </div>
+
+        <div class="previous-workout-state previous-workout-state--error" data-previous-workout-state="error" role="alert" hidden>
+            <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span>
+            <p>Não foi possível consultar o histórico agora.</p>
+            <button class="button button--ghost button--compact" type="button" data-previous-workout-retry>Tentar novamente</button>
+        </div>
+
+        <div class="previous-workout-content" data-previous-workout-state="content" hidden>
+            <p class="previous-workout-date"><strong data-previous-workout-relative></strong><span data-previous-workout-date></span></p>
+            <div class="previous-workout-summary" data-previous-workout-summary></div>
+
+            <div class="previous-workout-sets-heading">
+                <h3 data-previous-workout-sets-title>Séries registradas</h3>
+                <span class="pill" data-previous-workout-count></span>
+            </div>
+            <div class="previous-workout-table-wrap">
+                <table class="previous-workout-table">
+                    <thead><tr data-previous-workout-table-head></tr></thead>
+                    <tbody data-previous-workout-table-body></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="previous-workout-dialog__actions">
+            <button class="button button--primary button--full" type="button" data-dialog-close>Fechar</button>
+        </div>
+    </div>
+</dialog>

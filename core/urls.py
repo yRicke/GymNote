@@ -71,6 +71,11 @@ urlpatterns = [
         name="workout_exercise",
     ),
     path(
+        "treino/<str:date_str>/exercicio/<int:pk>/resumo-anterior/",
+        views.previous_workout_summary,
+        name="previous_workout_summary",
+    ),
+    path(
         "treino/<str:date_str>/exercicio/<int:pk>/remover/",
         views.remove_exercise,
         name="remove_exercise",

@@ -526,6 +526,149 @@
         errors.hidden = false;
         errors.focus({ preventScroll: true });
     };
+    const previousWorkoutTrigger = document.querySelector(
+        "[data-previous-workout-open]",
+    );
+    const previousWorkoutDialog = document.getElementById(
+        "previous-workout-dialog",
+    );
+    if (previousWorkoutTrigger && previousWorkoutDialog) {
+        const stateElements = [
+            ...previousWorkoutDialog.querySelectorAll(
+                "[data-previous-workout-state]",
+            ),
+        ];
+        const summary = previousWorkoutDialog.querySelector(
+            "[data-previous-workout-summary]",
+        );
+        const tableHead = previousWorkoutDialog.querySelector(
+            "[data-previous-workout-table-head]",
+        );
+        const tableBody = previousWorkoutDialog.querySelector(
+            "[data-previous-workout-table-body]",
+        );
+        const retryButton = previousWorkoutDialog.querySelector(
+            "[data-previous-workout-retry]",
+        );
+        let previousWorkoutLoaded = false;
+        let previousWorkoutRequest = null;
+
+        const showPreviousWorkoutState = (state) => {
+            stateElements.forEach((element) => {
+                element.hidden = element.dataset.previousWorkoutState !== state;
+            });
+        };
+        const createTextElement = (tagName, text, className = "") => {
+            const element = document.createElement(tagName);
+            element.textContent = text;
+            if (className) element.className = className;
+            return element;
+        };
+        const renderPreviousWorkout = (data) => {
+            previousWorkoutDialog.querySelector(
+                "[data-previous-workout-relative]",
+            ).textContent = data.relative_label;
+            previousWorkoutDialog.querySelector(
+                "[data-previous-workout-date]",
+            ).textContent = `Treino de ${data.date_label}`;
+
+            summary.replaceChildren();
+            data.summary_items.forEach((item) => {
+                const tile = document.createElement("div");
+                tile.className = "previous-workout-summary__item";
+                tile.append(
+                    createTextElement("span", item.label),
+                    createTextElement("strong", item.value),
+                );
+                summary.append(tile);
+            });
+
+            const columns = data.is_cardio
+                ? ["Registro", "Min", "km", "Esforço"]
+                : ["Série", "kg", "Reps", "Parciais", "Válida"];
+            tableHead.replaceChildren();
+            columns.forEach((column) => {
+                tableHead.append(createTextElement("th", column));
+            });
+
+            tableBody.replaceChildren();
+            data.sets.forEach((exerciseSet) => {
+                const row = document.createElement("tr");
+                const values = data.is_cardio
+                    ? [
+                        exerciseSet.order,
+                        exerciseSet.duration_minutes,
+                        exerciseSet.distance_km,
+                        exerciseSet.perceived_exertion === "—"
+                            ? "—"
+                            : `${exerciseSet.perceived_exertion}/10`,
+                    ]
+                    : [
+                        exerciseSet.order,
+                        exerciseSet.weight_kg,
+                        exerciseSet.reps,
+                        exerciseSet.partial_reps,
+                        exerciseSet.is_working_set ? "Sim" : "Não",
+                    ];
+                values.forEach((value, index) => {
+                    const cell = createTextElement("td", value ?? "—");
+                    if (!data.is_cardio && index === values.length - 1) {
+                        cell.className = exerciseSet.is_working_set
+                            ? "is-working-set"
+                            : "";
+                    }
+                    row.append(cell);
+                });
+                tableBody.append(row);
+            });
+
+            previousWorkoutDialog.querySelector(
+                "[data-previous-workout-sets-title]",
+            ).textContent = data.is_cardio
+                ? "Registros anteriores"
+                : "Séries anteriores";
+            previousWorkoutDialog.querySelector(
+                "[data-previous-workout-count]",
+            ).textContent = data.sets.length;
+        };
+        const loadPreviousWorkout = () => {
+            if (previousWorkoutLoaded || previousWorkoutRequest) return;
+            showPreviousWorkoutState("loading");
+            previousWorkoutTrigger.setAttribute("aria-busy", "true");
+            previousWorkoutRequest = fetch(
+                previousWorkoutTrigger.dataset.previousWorkoutUrl,
+                {
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                },
+            )
+                .then(async (response) => {
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.ok) throw new Error("history-request");
+                    previousWorkoutLoaded = true;
+                    if (!data.has_history) {
+                        previousWorkoutDialog.querySelector(
+                            "[data-previous-workout-empty-message]",
+                        ).textContent = data.message;
+                        showPreviousWorkoutState("empty");
+                        return;
+                    }
+                    renderPreviousWorkout(data);
+                    showPreviousWorkoutState("content");
+                })
+                .catch(() => showPreviousWorkoutState("error"))
+                .finally(() => {
+                    previousWorkoutRequest = null;
+                    previousWorkoutTrigger.removeAttribute("aria-busy");
+                });
+        };
+
+        previousWorkoutTrigger.addEventListener("click", loadPreviousWorkout);
+        retryButton.addEventListener("click", loadPreviousWorkout);
+    }
     const exerciseSetValuesElement = document.getElementById("exercise-set-form-values");
     const exerciseSetValues = exerciseSetValuesElement
         ? JSON.parse(exerciseSetValuesElement.textContent)
