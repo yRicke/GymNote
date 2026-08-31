@@ -852,57 +852,65 @@ def _history_relative_label(current_date, previous_date):
 
 
 def _strength_history_payload(exercise_sets):
-    complete_sets = [
+    feeder_set = next(
+        (
+            exercise_set
+            for exercise_set in exercise_sets
+            if not exercise_set.is_working_set
+        ),
+        None,
+    )
+    working_sets = [
         exercise_set
         for exercise_set in exercise_sets
-        if exercise_set.weight_kg is not None and exercise_set.reps is not None
+        if exercise_set.is_working_set
+        and exercise_set.weight_kg is not None
+        and exercise_set.reps is not None
     ]
-    working_sets = [
-        exercise_set for exercise_set in complete_sets if exercise_set.is_working_set
-    ]
-    top_candidates = working_sets or complete_sets
+    work_set = (
+        min(
+            working_sets,
+            key=lambda exercise_set: (exercise_set.weight_kg, exercise_set.order),
+        )
+        if working_sets
+        else None
+    )
     top_set = (
         max(
-            top_candidates,
-            key=lambda exercise_set: (exercise_set.weight_kg, exercise_set.reps),
+            working_sets,
+            key=lambda exercise_set: (
+                exercise_set.weight_kg,
+                exercise_set.reps,
+                -exercise_set.order,
+            ),
         )
-        if top_candidates
-        else None
-    )
-    average_weight = (
-        sum(
-            (exercise_set.weight_kg for exercise_set in working_sets),
-            start=Decimal("0"),
-        )
-        / len(working_sets)
         if working_sets
         else None
     )
-    average_reps = (
-        Decimal(sum(exercise_set.reps for exercise_set in working_sets))
-        / len(working_sets)
-        if working_sets
-        else None
-    )
+
+    def set_value(exercise_set, empty_value):
+        if exercise_set is None:
+            return empty_value
+        if exercise_set.weight_kg is None or exercise_set.reps is None:
+            return "Dados incompletos"
+        return (
+            f"{_format_history_number(exercise_set.weight_kg)} kg × "
+            f"{exercise_set.reps} reps"
+        )
+
     return {
         "summary_items": [
             {
-                "label": "Top set",
-                "value": (
-                    f"{_format_history_number(top_set.weight_kg)} kg × "
-                    f"{top_set.reps} reps"
-                    if top_set
-                    else "Sem carga registrada"
-                ),
+                "label": "Feeder set",
+                "value": set_value(feeder_set, "Sem série de preparação"),
             },
             {
-                "label": "Média de trabalho",
-                "value": (
-                    f"{_format_history_number(average_weight)} kg × "
-                    f"{_format_history_number(average_reps)} reps"
-                    if working_sets
-                    else "Sem séries válidas"
-                ),
+                "label": "Work set",
+                "value": set_value(work_set, "Sem série válida"),
+            },
+            {
+                "label": "Top set",
+                "value": set_value(top_set, "Sem série válida"),
             },
         ],
         "sets": [

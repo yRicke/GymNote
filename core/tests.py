@@ -700,8 +700,9 @@ class WorkoutFlowTests(TestCase):
         self.assertEqual(
             data["summary_items"],
             [
+                {"label": "Feeder set", "value": "120 kg × 2 reps"},
+                {"label": "Work set", "value": "80 kg × 10 reps"},
                 {"label": "Top set", "value": "90 kg × 8 reps"},
-                {"label": "Média de trabalho", "value": "85 kg × 9 reps"},
             ],
         )
         self.assertEqual([item["order"] for item in data["sets"]], [1, 2, 3])
