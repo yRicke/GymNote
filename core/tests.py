@@ -598,6 +598,8 @@ class WorkoutFlowTests(TestCase):
         self.assertIn('row.classList.add("is-working")', javascript)
         self.assertIn("working-mark previous-working-mark", javascript)
         self.assertIn('"set-number"', javascript)
+        self.assertIn('item.value.split(" × ")', javascript)
+        self.assertIn("previous-workout-summary__value", javascript)
         self.assertIn(
             "grid-template-columns: repeat(3, minmax(0, 1fr))",
             css,

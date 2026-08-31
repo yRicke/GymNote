@@ -577,9 +577,17 @@
             data.summary_items.forEach((item) => {
                 const tile = document.createElement("div");
                 tile.className = "previous-workout-summary__item";
+                const value = document.createElement("strong");
+                value.className = "previous-workout-summary__value";
+                const valueLines = data.is_cardio
+                    ? [item.value]
+                    : item.value.split(" × ");
+                valueLines.forEach((line) => {
+                    value.append(createTextElement("span", line));
+                });
                 tile.append(
                     createTextElement("span", item.label),
-                    createTextElement("strong", item.value),
+                    value,
                 );
                 summary.append(tile);
             });
