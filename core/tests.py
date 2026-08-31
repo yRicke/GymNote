@@ -592,11 +592,16 @@ class WorkoutFlowTests(TestCase):
         )
         self.assertNotContains(response, "123,45 kg")
         javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
+        css = Path(finders.find("core/css/app.css")).read_text(encoding="utf-8")
         self.assertIn("previousWorkoutTrigger.addEventListener", javascript)
         self.assertIn("previousWorkoutLoaded", javascript)
         self.assertIn('row.classList.add("is-working")', javascript)
         self.assertIn("working-mark previous-working-mark", javascript)
         self.assertIn('"set-number"', javascript)
+        self.assertIn(
+            "grid-template-columns: repeat(3, minmax(0, 1fr))",
+            css,
+        )
 
     def test_previous_workout_summary_uses_latest_entry_with_sets(self):
         _, current_entry = self.create_entry()
