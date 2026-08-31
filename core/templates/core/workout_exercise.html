@@ -30,14 +30,19 @@
             <div class="sets-table-wrap">
                 <table class="sets-table {% if is_cardio %}sets-table--cardio{% endif %}">
                     {% if is_cardio %}
-                        <thead><tr><th>Registro</th><th>Min</th><th>km</th><th>Esforço</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                        <thead><tr><th>Registro</th><th>Min</th><th>km</th><th>Esforço</th></tr></thead>
                     {% else %}
-                        <thead><tr><th>Série</th><th>kg</th><th>Reps</th><th>Parciais</th><th>Válida</th><th><span class="sr-only">Ações</span></th></tr></thead>
+                        <thead><tr><th>Série</th><th>kg</th><th>Reps</th><th>Parciais</th><th>Válida</th></tr></thead>
                     {% endif %}
                     <tbody>
                         {% for exercise_set in exercise_sets %}
                             <tr class="{% if not is_cardio and exercise_set.is_working_set %}is-working{% endif %}">
-                                <td data-label="{% if is_cardio %}Registro{% else %}Série{% endif %}"><span class="set-number">{{ exercise_set.order }}</span></td>
+                                <td data-label="{% if is_cardio %}Registro{% else %}Série{% endif %}">
+                                    <div class="set-identity">
+                                        <a class="set-edit-button" href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="set-form-dialog" data-set-form-mode="edit" data-set-id="{{ exercise_set.pk }}" data-set-action="{% url 'core:edit_set' pk=exercise_set.pk %}" data-set-title="Editar {% if is_cardio %}registro{% else %}série{% endif %}" data-set-eyebrow="{% if is_cardio %}Registro{% else %}Série{% endif %} {{ exercise_set.order }}" data-delete-url="{% url 'core:delete_set' pk=exercise_set.pk %}" data-delete-title="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}?" data-delete-copy="Esta ação remove permanentemente os dados registrados."><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
+                                        <span class="set-number">{{ exercise_set.order }}</span>
+                                    </div>
+                                </td>
                                 {% if is_cardio %}
                                     <td data-label="Duração"><strong>{{ exercise_set.duration_minutes }} min</strong></td>
                                     <td data-label="Distância"><strong>{% if exercise_set.distance_km is not None %}{{ exercise_set.distance_km|floatformat:"-2" }}{% else %}—{% endif %}</strong></td>
@@ -48,10 +53,6 @@
                                     <td data-label="Parciais">{{ exercise_set.partial_reps|default_if_none:"—" }}</td>
                                     <td data-label="Válida"><span class="working-mark {% if exercise_set.is_working_set %}is-active{% endif %}"><span class="material-symbols-outlined" aria-hidden="true">check</span><span class="sr-only">{{ exercise_set.is_working_set|yesno:"Sim,Não" }}</span></span></td>
                                 {% endif %}
-                                <td class="set-actions">
-                                    <a href="{% url 'core:edit_set' pk=exercise_set.pk %}" aria-label="Editar {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="set-form-dialog" data-set-form-mode="edit" data-set-id="{{ exercise_set.pk }}" data-set-action="{% url 'core:edit_set' pk=exercise_set.pk %}" data-set-title="Editar {% if is_cardio %}registro{% else %}série{% endif %}" data-set-eyebrow="{% if is_cardio %}Registro{% else %}Série{% endif %} {{ exercise_set.order }}"><span class="material-symbols-outlined" aria-hidden="true">edit</span></a>
-                                    <a class="is-danger" href="{% url 'core:delete_set' pk=exercise_set.pk %}" aria-label="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_set' pk=exercise_set.pk %}" data-delete-title="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ exercise_set.order }}?" data-delete-copy="Esta ação remove permanentemente os dados registrados."><span class="material-symbols-outlined" aria-hidden="true">delete</span></a>
-                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

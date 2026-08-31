@@ -573,7 +573,7 @@ class WorkoutFlowTests(TestCase):
         self.assertTrue(response.json()["ok"])
         self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
 
-    def test_set_deletion_uses_modal_and_returns_json(self):
+    def test_set_deletion_is_available_inside_edit_modal_and_returns_json(self):
         _, entry = self.create_entry()
         exercise_set = ExerciseSet.objects.create(
             workout_exercise=entry,
@@ -595,8 +595,15 @@ class WorkoutFlowTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
 
+        self.assertContains(page, 'class="set-identity"')
+        self.assertContains(page, 'class="set-edit-button"')
+        self.assertContains(page, 'data-nested-dialog-open="delete-dialog"')
+        self.assertContains(page, 'data-set-delete')
         self.assertContains(page, f'data-delete-url="{url}"')
         self.assertContains(page, "Excluir série 1?")
+        self.assertNotContains(page, 'data-dialog-open="delete-dialog"')
+        html = page.content.decode()
+        self.assertLess(html.index('class="set-edit-button"'), html.index('class="set-number"'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["message"], "Série excluída.")
         self.assertFalse(ExerciseSet.objects.filter(pk=exercise_set.pk).exists())
@@ -629,9 +636,12 @@ class WorkoutFlowTests(TestCase):
         self.assertContains(response, f'data-set-action="{add_url}"')
         self.assertContains(response, f'data-set-action="{edit_url}"')
         self.assertContains(response, 'data-dialog-form data-set-form')
+        self.assertContains(response, 'class="set-form-dialog__actions"')
+        self.assertContains(response, 'data-nested-dialog-open="delete-dialog" hidden')
         self.assertNotContains(response, 'class="content-section panel set-entry"')
         javascript = Path(finders.find("core/js/app.js")).read_text(encoding="utf-8")
         self.assertIn("configureSetDialog(dialog, opener)", javascript)
+        self.assertIn("configureDeleteDialog(childDialog, opener)", javascript)
         self.assertIn("exerciseSetValues[opener.dataset.setId]", javascript)
         self.assertEqual(
             response.context["exercise_set_values"][str(exercise_set.pk)],
@@ -666,6 +676,13 @@ class WorkoutFlowTests(TestCase):
             response,
             f'action="{reverse("core:edit_set", kwargs={"pk": exercise_set.pk})}"',
         )
+        self.assertContains(response, 'data-set-delete')
+        self.assertContains(response, 'data-nested-dialog-open="delete-dialog"')
+        self.assertContains(
+            response,
+            f'data-delete-url="{reverse("core:delete_set", kwargs={"pk": exercise_set.pk})}"',
+        )
+        self.assertNotContains(response, 'data-nested-dialog-open="delete-dialog" hidden')
         self.assertEqual(response.context["editing_set"], exercise_set)
         self.assertEqual(response.context["set_form"].instance, exercise_set)
 

@@ -539,6 +539,15 @@
         perceived_exertion: "",
         is_working_set: false,
     };
+    const configureDeleteDialog = (dialog, opener) => {
+        const form = dialog.querySelector("[data-delete-dialog-form]");
+        if (!form || !opener.dataset.deleteUrl) return;
+        form.action = opener.dataset.deleteUrl;
+        dialog.querySelector("[data-delete-dialog-title]").textContent =
+            opener.dataset.deleteTitle;
+        dialog.querySelector("[data-delete-dialog-copy]").textContent =
+            opener.dataset.deleteCopy;
+    };
     const configureSetDialog = (dialog, opener) => {
         const form = dialog.querySelector("[data-set-form]");
         if (!form || !opener.dataset.setFormMode) return;
@@ -554,6 +563,17 @@
             opener.dataset.setEyebrow;
         dialog.querySelector("[data-set-dialog-icon]").textContent =
             isEditing ? "edit" : "add";
+        const deleteButton = form.querySelector("[data-set-delete]");
+        if (deleteButton) {
+            deleteButton.hidden = !isEditing;
+            ["deleteUrl", "deleteTitle", "deleteCopy"].forEach((key) => {
+                if (isEditing && opener.dataset[key]) {
+                    deleteButton.dataset[key] = opener.dataset[key];
+                } else {
+                    delete deleteButton.dataset[key];
+                }
+            });
+        }
         Object.entries(values).forEach(([fieldName, value]) => {
             const field = form.elements.namedItem(fieldName);
             if (!field) return;
@@ -578,15 +598,8 @@
             if (!dialog || typeof dialog.showModal !== "function") return;
             event.preventDefault();
             dialogOpeners.set(dialog, opener);
-            const deleteForm = dialog.querySelector("[data-delete-dialog-form]");
-            if (deleteForm && opener.dataset.deleteUrl) {
-                deleteForm.action = opener.dataset.deleteUrl;
-                dialog.querySelector("[data-delete-dialog-title]").textContent =
-                    opener.dataset.deleteTitle;
-                dialog.querySelector("[data-delete-dialog-copy]").textContent =
-                    opener.dataset.deleteCopy;
-            }
             resetDialog(dialog);
+            configureDeleteDialog(dialog, opener);
             configureSetDialog(dialog, opener);
             catalogControllers.get(dialog)?.resetDraft();
             dialog.returnValue = "";
@@ -610,6 +623,7 @@
             nestedDialogOpeners.set(childDialog, opener);
             parentDialog.close("nested");
             resetDialog(childDialog);
+            configureDeleteDialog(childDialog, opener);
             childDialog.returnValue = "";
             childDialog.showModal();
             window.requestAnimationFrame(() => {

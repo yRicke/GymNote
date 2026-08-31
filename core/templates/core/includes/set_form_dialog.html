@@ -12,9 +12,12 @@
             {% csrf_token %}
             <div class="dialog-alert" data-dialog-errors role="alert" tabindex="-1" hidden></div>
             {% include "core/includes/set_form_fields.html" with form=set_form %}
-            <div class="preset-dialog__actions">
-                <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
-                <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}" data-loading-text="Salvando…">{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}</button>
+            <div class="set-form-dialog__actions">
+                <button class="button button--danger set-form-dialog__delete" type="button" data-set-delete data-nested-dialog-open="delete-dialog"{% if editing_set %} data-delete-url="{% url 'core:delete_set' pk=editing_set.pk %}" data-delete-title="Excluir {% if is_cardio %}registro{% else %}série{% endif %} {{ editing_set.order }}?" data-delete-copy="Esta ação remove permanentemente os dados registrados."{% else %} hidden{% endif %}><span class="material-symbols-outlined" aria-hidden="true">delete</span> Excluir {% if is_cardio %}registro{% else %}série{% endif %}</button>
+                <div class="preset-dialog__actions set-form-dialog__primary-actions">
+                    <button class="button button--ghost" type="button" data-dialog-close>Cancelar</button>
+                    <button class="button button--primary" type="submit" data-dialog-submit data-idle-text="{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}" data-loading-text="Salvando…">{% if editing_set %}Salvar alterações{% else %}Adicionar {% if is_cardio %}registro{% else %}série{% endif %}{% endif %}</button>
+                </div>
             </div>
         </form>
     </div>
