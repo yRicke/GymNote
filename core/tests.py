@@ -604,6 +604,8 @@ class WorkoutFlowTests(TestCase):
             "grid-template-columns: repeat(3, minmax(0, 1fr))",
             css,
         )
+        self.assertIn("align-content: start; gap: 5px", css)
+        self.assertIn("font-size: clamp(.84rem, 3.8vw, 1rem)", css)
 
     def test_previous_workout_summary_uses_latest_entry_with_sets(self):
         _, current_entry = self.create_entry()

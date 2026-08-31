@@ -676,10 +676,10 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
 .previous-workout-date { display: flex; margin: 0; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: .78rem; }
 .previous-workout-date strong { color: var(--accent); font-size: .9rem; }
 .previous-workout-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.previous-workout-summary__item { display: grid; min-height: 78px; padding: 12px 13px; align-content: space-between; gap: 8px; border-radius: var(--radius-md); background: var(--surface-lowest); }
+.previous-workout-summary__item { display: grid; min-height: 78px; padding: 12px 13px; align-content: start; gap: 5px; border-radius: var(--radius-md); background: var(--surface-lowest); }
 .previous-workout-summary__item > span { color: var(--text-muted); font-family: "JetBrains Mono", monospace; font-size: .61rem; letter-spacing: .05em; text-transform: uppercase; }
-.previous-workout-summary__item strong { font-size: .9rem; }
-.previous-workout-summary__value { display: grid; gap: 1px; }
+.previous-workout-summary__item strong { font-size: .95rem; }
+.previous-workout-summary__value { display: grid; gap: 0; line-height: 1.2; }
 .previous-workout-summary__value span { display: block; }
 .previous-workout-sets-heading { display: flex; margin-top: 2px; align-items: center; justify-content: space-between; gap: 12px; }
 .previous-workout-sets-heading h3 { margin: 0; font-size: 1rem; }
@@ -902,7 +902,7 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
     .previous-workout-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
     .previous-workout-summary__item { min-width: 0; min-height: 88px; padding: 10px 8px; }
     .previous-workout-summary__item > span { font-size: .52rem; letter-spacing: .03em; white-space: nowrap; }
-    .previous-workout-summary__item strong { font-size: clamp(.68rem, 3vw, .8rem); line-height: 1.25; }
+    .previous-workout-summary__item strong { font-size: clamp(.84rem, 3.8vw, 1rem); line-height: 1.15; }
     .exercise-catalog-dialog { width: 100%; max-width: none; }
     .exercise-catalog__results { max-height: min(48dvh, 430px); }
     .workout-filter__groups > div,
