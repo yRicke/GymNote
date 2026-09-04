@@ -551,6 +551,63 @@ class WorkoutFlowTests(TestCase):
         self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
         self.assertFalse(ExerciseSet.objects.exists())
 
+    def test_deleting_all_workout_exercises_removes_workout_and_sets(self):
+        workout, first_entry = self.create_entry()
+        second_entry = WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.bench,
+            muscle_group=self.chest,
+            order=2,
+        )
+        ExerciseSet.objects.create(workout_exercise=first_entry, order=1, reps=10)
+        ExerciseSet.objects.create(workout_exercise=second_entry, order=1, reps=8)
+        url = reverse(
+            "core:delete_workout_exercises",
+            kwargs={"date_str": "2026-08-14"},
+        )
+
+        confirmation = self.client.get(url)
+        response = self.client.post(url)
+
+        self.assertContains(confirmation, "Excluir todos os exercícios?")
+        self.assertContains(confirmation, "Todas as séries e todos os registros")
+        self.assertRedirects(
+            response,
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"}),
+        )
+        self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
+        self.assertFalse(WorkoutExercise.objects.exists())
+        self.assertFalse(ExerciseSet.objects.exists())
+
+    def test_workout_exercises_bulk_deletion_is_available_only_to_owner(self):
+        self.create_entry(user=self.other_user)
+        url = reverse(
+            "core:delete_workout_exercises",
+            kwargs={"date_str": "2026-08-14"},
+        )
+
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Workout.objects.filter(user=self.other_user).exists())
+
+    def test_workout_day_shows_bulk_deletion_only_when_it_has_exercises(self):
+        empty_page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        self.create_entry()
+        populated_page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        delete_url = reverse(
+            "core:delete_workout_exercises",
+            kwargs={"date_str": "2026-08-14"},
+        )
+
+        self.assertNotContains(empty_page, delete_url)
+        self.assertContains(populated_page, delete_url)
+        self.assertContains(populated_page, "Excluir todos os exercícios")
+
     def test_exercise_detail_exposes_lazy_previous_workout_dialog(self):
         _, entry = self.create_entry()
         previous_workout = Workout.objects.create(

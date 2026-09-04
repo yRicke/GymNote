@@ -668,6 +668,37 @@ def reorder_exercises(request, date_str):
     return JsonResponse({"ok": True, "order": requested_order})
 
 
+@login_required
+def delete_workout_exercises(request, date_str):
+    workout_date = _parse_date(date_str)
+    workout = get_object_or_404(
+        Workout.objects.filter(workout_exercises__isnull=False).distinct(),
+        user=request.user,
+        date=workout_date,
+    )
+    if request.method == "POST":
+        workout.delete()
+        messages.success(request, "Todos os exercícios do treino foram excluídos.")
+        return redirect("core:workout_day", date_str=date_str)
+
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir exercícios do treino",
+            "item_type": "treino do dia",
+            "item_name": "todos os exercícios",
+            "warning": (
+                "Todas as séries e todos os registros deste treino também "
+                "serão excluídos."
+            ),
+            "cancel_url": reverse(
+                "core:workout_day", kwargs={"date_str": date_str}
+            ),
+        },
+    )
+
+
 @require_POST
 @login_required
 def save_workout_preset(request, date_str):
