@@ -608,6 +608,30 @@ class WorkoutFlowTests(TestCase):
         self.assertContains(populated_page, delete_url)
         self.assertContains(populated_page, "Excluir todos os exercícios")
 
+    def test_workout_bulk_deletion_uses_confirmation_modal_and_returns_json(self):
+        workout, _ = self.create_entry()
+        url = reverse(
+            "core:delete_workout_exercises",
+            kwargs={"date_str": "2026-08-14"},
+        )
+
+        page = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+        response = self.client.post(
+            url,
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertContains(page, 'data-dialog-open="delete-dialog"')
+        self.assertContains(page, f'data-delete-url="{url}"')
+        self.assertContains(page, 'data-delete-title="Excluir todos os exercícios?"')
+        self.assertContains(page, 'id="delete-dialog"')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertFalse(Workout.objects.filter(pk=workout.pk).exists())
+
     def test_exercise_detail_exposes_lazy_previous_workout_dialog(self):
         _, entry = self.create_entry()
         previous_workout = Workout.objects.create(
@@ -1533,6 +1557,30 @@ class PersonalizationTests(TestCase):
         self.assertContains(populated_page, populated_url)
         self.assertContains(populated_page, "Excluir todos os exercícios")
         self.assertNotContains(empty_page, empty_url)
+
+    def test_preset_bulk_deletion_uses_confirmation_modal_and_returns_json(self):
+        preset = self.create_preset(entries=[self.system_chest])
+        url = reverse(
+            "core:delete_workout_preset_exercises",
+            kwargs={"pk": preset.pk},
+        )
+
+        page = self.client.get(
+            reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk})
+        )
+        response = self.client.post(
+            url,
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertContains(page, 'data-dialog-open="delete-dialog"')
+        self.assertContains(page, f'data-delete-url="{url}"')
+        self.assertContains(page, 'data-delete-title="Excluir todos os exercícios?"')
+        self.assertContains(page, 'id="delete-dialog"')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertFalse(preset.exercise_entries.exists())
 
     def test_empty_presets_are_not_offered_to_load_in_workout(self):
         empty = self.create_preset(name="Predefinição vazia")

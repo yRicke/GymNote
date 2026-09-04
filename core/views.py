@@ -491,10 +491,10 @@ def delete_workout_preset_exercises(request, pk):
     )
     if request.method == "POST":
         preset.exercise_entries.all().delete()
-        messages.success(
-            request,
-            "Todos os exercícios da predefinição foram excluídos.",
-        )
+        message = "Todos os exercícios da predefinição foram excluídos."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect("core:personalization_preset_edit", pk=preset.pk)
 
     return render(
@@ -714,7 +714,10 @@ def delete_workout_exercises(request, date_str):
     )
     if request.method == "POST":
         workout.delete()
-        messages.success(request, "Todos os exercícios do treino foram excluídos.")
+        message = "Todos os exercícios do treino foram excluídos."
+        messages.success(request, message)
+        if _wants_json(request):
+            return JsonResponse({"ok": True, "message": message})
         return redirect("core:workout_day", date_str=date_str)
 
     return render(

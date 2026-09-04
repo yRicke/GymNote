@@ -61,7 +61,7 @@
             {% for error in form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             <button class="button button--preset-load button--full preset-builder__catalog-button" type="button" data-dialog-open="exercise-catalog-dialog"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar exercício</button>
             {% if preset and form.selected_exercise_rows %}
-                <a class="button button--danger button--full preset-builder__catalog-button" href="{% url 'core:delete_workout_preset_exercises' pk=preset.pk %}"><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span> Excluir todos os exercícios</a>
+                <a class="button button--danger button--full preset-builder__catalog-button" href="{% url 'core:delete_workout_preset_exercises' pk=preset.pk %}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_workout_preset_exercises' pk=preset.pk %}" data-delete-title="Excluir todos os exercícios?" data-delete-copy="A predefinição será mantida e poderá receber novos exercícios. Os treinos já registrados não serão alterados."><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span> Excluir todos os exercícios</a>
             {% endif %}
         </section>
 
@@ -82,5 +82,6 @@
     </form>
 
     {% include "core/includes/custom_exercise_dialog.html" %}
+    {% include "core/includes/delete_dialog.html" %}
 </div>
 {% endblock %}
