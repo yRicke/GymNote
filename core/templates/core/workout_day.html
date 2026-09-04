@@ -65,12 +65,16 @@
         {% endif %}
         <div class="preset-actions">
             <button class="button button--primary button--full" type="button" data-dialog-open="exercise-catalog-dialog"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar exercício</button>
-            {% if added_exercises %}
-                <button class="button button--ghost button--full" type="button" data-dialog-open="save-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar como predefinição</button>
-                <a class="button button--danger button--full" href="{% url 'core:delete_workout_exercises' date_str=workout_date|date:'Y-m-d' %}" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_workout_exercises' date_str=workout_date|date:'Y-m-d' %}" data-delete-title="Excluir todos os exercícios?" data-delete-copy="Todas as séries e todos os registros deste treino também serão excluídos."><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span> Excluir todos os exercícios</a>
-            {% endif %}
-            {% if presets %}
-                <button class="button button--preset-load button--full" type="button" data-dialog-open="load-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">playlist_play</span> Carregar predefinição</button>
+            {% if added_exercises or presets %}
+                <div class="preset-actions__secondary">
+                    {% if added_exercises %}
+                        <a class="button button--danger button--full" href="{% url 'core:delete_workout_exercises' date_str=workout_date|date:'Y-m-d' %}" aria-label="Excluir todos os exercícios" data-dialog-open="delete-dialog" data-delete-url="{% url 'core:delete_workout_exercises' date_str=workout_date|date:'Y-m-d' %}" data-delete-title="Excluir todos os exercícios?" data-delete-copy="Todas as séries e todos os registros deste treino também serão excluídos."><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span> Excluir</a>
+                        <button class="button button--ghost button--full" type="button" aria-label="Salvar como predefinição" data-dialog-open="save-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span> Salvar</button>
+                    {% endif %}
+                    {% if presets %}
+                        <button class="button button--preset-load button--full" type="button" aria-label="Carregar predefinição" data-dialog-open="load-preset-dialog"><span class="material-symbols-outlined" aria-hidden="true">playlist_play</span> Carregar</button>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
     </section>

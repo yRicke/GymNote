@@ -607,6 +607,9 @@ class WorkoutFlowTests(TestCase):
         self.assertNotContains(empty_page, delete_url)
         self.assertContains(populated_page, delete_url)
         self.assertContains(populated_page, "Excluir todos os exercícios")
+        self.assertContains(populated_page, 'class="preset-actions__secondary"')
+        self.assertContains(populated_page, '> Excluir</a>', html=False)
+        self.assertContains(populated_page, '> Salvar</button>', html=False)
 
     def test_workout_bulk_deletion_uses_confirmation_modal_and_returns_json(self):
         workout, _ = self.create_entry()
@@ -1556,6 +1559,12 @@ class PersonalizationTests(TestCase):
 
         self.assertContains(populated_page, populated_url)
         self.assertContains(populated_page, "Excluir todos os exercícios")
+        self.assertContains(populated_page, 'class="preset-builder__exercise-actions"')
+        self.assertContains(populated_page, '> Excluir todos</a>', html=False)
+        self.assertLess(
+            populated_page.content.index(b"> Excluir todos</a>"),
+            populated_page.content.index(b"> Adicionar exerc\xc3\xadcio</button>"),
+        )
         self.assertNotContains(empty_page, empty_url)
 
     def test_preset_bulk_deletion_uses_confirmation_modal_and_returns_json(self):
@@ -1721,6 +1730,15 @@ class PersonalizationTests(TestCase):
         self.assertContains(response, 'data-dialog-open="save-preset-dialog"')
         self.assertContains(response, 'data-dialog-open="load-preset-dialog"')
         self.assertContains(response, 'data-dialog-open="exercise-catalog-dialog"')
+        self.assertContains(response, 'class="preset-actions__secondary"')
+        self.assertLess(
+            response.content.index(b"> Excluir</a>"),
+            response.content.index(b"> Salvar</button>"),
+        )
+        self.assertLess(
+            response.content.index(b"> Salvar</button>"),
+            response.content.index(b"> Carregar</button>"),
+        )
         self.assertContains(response, 'id="exercise-catalog-dialog"')
         self.assertContains(response, 'data-catalog-mode="workout"')
         self.assertContains(response, '<dialog class="preset-dialog', count=5)

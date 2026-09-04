@@ -360,7 +360,8 @@ h3 { margin-bottom: 6px; font-size: 1rem; }
 .preset-builder__selected-main .exercise-choice__meta { justify-self: end; }
 .preset-builder__remove { margin-left: 1px; }
 .preset-builder__selection-empty { padding: 22px 16px; }
-.preset-builder__catalog-button { margin-top: 12px; }
+.preset-builder__exercise-actions { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 9px; margin-top: 12px; }
+.preset-builder__exercise-actions .button { min-width: 0; padding-inline: clamp(8px, 2.5vw, 18px); font-size: clamp(.72rem, 2.5vw, .9rem); }
 .preset-builder__actions { margin-top: 2px; }
 
 .pill {
@@ -472,6 +473,9 @@ body.is-reordering * { cursor: grabbing !important; -webkit-user-select: none !i
 .sortable-dragging .drag-handle { cursor: grabbing; }
 .drag-handle .material-symbols-outlined { pointer-events: none; font-size: 22px; -webkit-user-select: none; user-select: none; }
 .preset-actions { display: grid; gap: 9px; margin-top: 12px; }
+.preset-actions__secondary { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 9px; }
+.preset-actions__secondary .button { min-width: 0; padding-inline: clamp(6px, 2.5vw, 18px); gap: clamp(3px, 1vw, 8px); font-size: clamp(.68rem, 2.6vw, .9rem); white-space: nowrap; }
+.preset-actions__secondary .material-symbols-outlined { font-size: clamp(18px, 5vw, 24px); }
 .button--preset-load { border-color: var(--outline); background: var(--surface-highest); color: var(--text); }
 .button--preset-load:hover { border-color: rgba(200, 243, 35, .36); background: var(--surface); }
 .button--preset-load .material-symbols-outlined { color: var(--accent); }
