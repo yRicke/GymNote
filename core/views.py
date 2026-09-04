@@ -483,6 +483,39 @@ def workout_preset_delete(request, pk):
 
 
 @login_required
+def delete_workout_preset_exercises(request, pk):
+    preset = get_object_or_404(
+        WorkoutPreset.objects.filter(exercise_entries__isnull=False).distinct(),
+        pk=pk,
+        user=request.user,
+    )
+    if request.method == "POST":
+        preset.exercise_entries.all().delete()
+        messages.success(
+            request,
+            "Todos os exercícios da predefinição foram excluídos.",
+        )
+        return redirect("core:personalization_preset_edit", pk=preset.pk)
+
+    return render(
+        request,
+        "core/confirm_delete.html",
+        {
+            "page_title": "Excluir exercícios da predefinição",
+            "item_type": "predefinição de treino",
+            "item_name": "todos os exercícios",
+            "warning": (
+                f'A predefinição "{preset.name}" será mantida e poderá receber '
+                "novos exercícios. Os treinos já registrados não serão alterados."
+            ),
+            "cancel_url": reverse(
+                "core:personalization_preset_edit", kwargs={"pk": preset.pk}
+            ),
+        },
+    )
+
+
+@login_required
 def workout_day(request, date_str):
     workout_date = _parse_date(date_str)
     workout = Workout.objects.filter(user=request.user, date=workout_date).first()
@@ -547,7 +580,10 @@ def workout_day(request, date_str):
             }
         )
     presets = (
-        WorkoutPreset.objects.filter(user=request.user)
+        WorkoutPreset.objects.filter(
+            user=request.user,
+            exercise_entries__isnull=False,
+        )
         .annotate(
             exercise_count=Count("exercise_entries", distinct=True),
             group_count=Count("exercise_entries__muscle_group", distinct=True),

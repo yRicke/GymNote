@@ -60,6 +60,9 @@
             </div>
             {% for error in form.exercises.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             <button class="button button--preset-load button--full preset-builder__catalog-button" type="button" data-dialog-open="exercise-catalog-dialog"><span class="material-symbols-outlined" aria-hidden="true">add</span> Adicionar exercício</button>
+            {% if preset and form.selected_exercise_rows %}
+                <a class="button button--danger button--full preset-builder__catalog-button" href="{% url 'core:delete_workout_preset_exercises' pk=preset.pk %}"><span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span> Excluir todos os exercícios</a>
+            {% endif %}
         </section>
 
         <dialog class="preset-dialog exercise-catalog-dialog" id="exercise-catalog-dialog" aria-labelledby="exercise-catalog-title">

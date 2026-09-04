@@ -1458,6 +1458,92 @@ class PersonalizationTests(TestCase):
             [custom.pk, self.system_chest.pk],
         )
 
+    def test_deleting_all_preset_exercises_keeps_preset_and_workouts(self):
+        preset = self.create_preset(
+            entries=[self.system_chest, self.system_triceps]
+        )
+        workout = Workout.objects.create(user=self.user, date=date(2026, 8, 14))
+        history = WorkoutExercise.objects.create(
+            workout=workout,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+        url = reverse(
+            "core:delete_workout_preset_exercises",
+            kwargs={"pk": preset.pk},
+        )
+
+        confirmation = self.client.get(url)
+        response = self.client.post(url)
+
+        self.assertContains(confirmation, "Excluir todos os exercícios?")
+        self.assertContains(confirmation, "Os treinos já registrados não serão alterados")
+        self.assertRedirects(
+            response,
+            reverse("core:personalization_preset_edit", kwargs={"pk": preset.pk}),
+        )
+        self.assertTrue(WorkoutPreset.objects.filter(pk=preset.pk).exists())
+        self.assertFalse(preset.exercise_entries.exists())
+        self.assertTrue(WorkoutExercise.objects.filter(pk=history.pk).exists())
+
+    def test_preset_exercises_bulk_deletion_is_available_only_to_owner(self):
+        foreign = WorkoutPreset.objects.create(
+            user=self.other_user,
+            name="Predefinição privada",
+        )
+        WorkoutPresetExercise.objects.create(
+            preset=foreign,
+            exercise=self.system_chest,
+            muscle_group=self.chest,
+            order=1,
+        )
+        url = reverse(
+            "core:delete_workout_preset_exercises",
+            kwargs={"pk": foreign.pk},
+        )
+
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(foreign.exercise_entries.exists())
+
+    def test_edit_preset_shows_bulk_deletion_only_when_it_has_exercises(self):
+        populated = self.create_preset(entries=[self.system_chest])
+        empty = self.create_preset(name="Predefinição vazia")
+        populated_url = reverse(
+            "core:delete_workout_preset_exercises",
+            kwargs={"pk": populated.pk},
+        )
+        empty_url = reverse(
+            "core:delete_workout_preset_exercises",
+            kwargs={"pk": empty.pk},
+        )
+
+        populated_page = self.client.get(
+            reverse(
+                "core:personalization_preset_edit",
+                kwargs={"pk": populated.pk},
+            )
+        )
+        empty_page = self.client.get(
+            reverse("core:personalization_preset_edit", kwargs={"pk": empty.pk})
+        )
+
+        self.assertContains(populated_page, populated_url)
+        self.assertContains(populated_page, "Excluir todos os exercícios")
+        self.assertNotContains(empty_page, empty_url)
+
+    def test_empty_presets_are_not_offered_to_load_in_workout(self):
+        empty = self.create_preset(name="Predefinição vazia")
+
+        response = self.client.get(
+            reverse("core:workout_day", kwargs={"date_str": "2026-08-14"})
+        )
+
+        self.assertNotContains(response, empty.name)
+        self.assertNotContains(response, 'data-dialog-open="load-preset-dialog"')
+
     def test_invalid_preset_rerenders_submitted_selection_and_order(self):
         response = self.client.post(
             reverse("core:personalization_preset_create"),

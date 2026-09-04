@@ -44,6 +44,11 @@ urlpatterns = [
         views.workout_preset_delete,
         name="personalization_preset_delete",
     ),
+    path(
+        "personalizacao/predefinicoes/<int:pk>/exercicios/excluir/",
+        views.delete_workout_preset_exercises,
+        name="delete_workout_preset_exercises",
+    ),
     path("treino/<str:date_str>/", views.workout_day, name="workout_day"),
     path(
         "treino/<str:date_str>/exercicios/adicionar/",
